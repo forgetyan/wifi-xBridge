@@ -41,8 +41,30 @@
 */
 
 #include <SoftwareSerial.h>
+#include <ESP8266WiFi.h>
+#include <ESP8266WiFiMulti.h>
+
+/*
+ * Wixel Configuration
+ */
 const String COMMUNICATION_STARTED_STRING = "AT+RESET";
 const char* DEXCOM_TRANSMITTER_ID = "6BCFK\0";
+
+/*
+ * Wifi Configuration
+ */
+const char* WIFI_SSID = "Drake";
+const char* WIFI_PASSWORD = "G6kpEhWCpB";
+
+const char* DEBUG_HOST = "192.168.0.192";
+const int DEBUG_PORT = 8001;
+
+WiFiClient _debugClient;
+
+/*
+ * Googe App Engine Configuration
+ */
+const char* appEngineHost = "jay-t1d.appspot.com";
 
 /*
  * Protocol descriptions:
@@ -82,6 +104,7 @@ Beacon Packet - Bridge to App.  Sends the TXID it is filtering on to the app, so
 
 #define DEXBRIDGE_PROTO_LEVEL 0x01
 
+#define HTTP_PORT 80
 typedef struct Dexcom_Packet_Struct
 {
   uint8_t len;
@@ -100,7 +123,7 @@ typedef struct Dexcom_Packet_Struct
 } Dexcom_packet;
 
 // software serial #1: RX = digital pin 2, TX = digital pin 3
-SoftwareSerial uartPort(2, 3);
+//SoftwareSerial uartPort(2, 3);
 
 // We need to wait for the AT+RESET command before any real communication with
 // the xBridge. These parameters will keep track of this.
@@ -116,24 +139,32 @@ unsigned char* _message;
  * Setup method called once when starting the Arduino
  */
 void setup() {
-  // Open serial communications for debugging
+  // Wait for the Wixel to boot First
+  delay(3000);
+  
+  // Open serial communications
   Serial.begin(9600);
-  while (!Serial) {
+  /*while (!Serial) {
     ; // wait for serial port to connect. Needed for native USB port only
-  }
-  Serial.print("wifi-xBridge Started!\r\n");
-  Serial.print("Debugging mode ");
-  #ifdef IS_DEBUG
-  Serial.print("ON");
-  #else
-  Serial.print("OFF");
-  #endif
-  Serial.print("\r\n");
-  // Start software serial port for wixel communication
-  uartPort.begin(9600);
-  uartPort.listen();
+  }*/
   _communicationStarted = true;
+  // Open WiFi connection
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+  }
+  // Open DEBUG connection
+  _debugClient.connect(DEBUG_HOST, DEBUG_PORT);
+  SendDebugText("wifi-xBridge Started!\r\n");
+  SendDebugText("Debugging mode ");
+  #ifdef IS_DEBUG
+  SendDebugText("ON");
+  #else
+  SendDebugText("OFF");
+  #endif
+  SendDebugText("\r\n");
 }
+
 
 /*
  * Function: loop
@@ -142,18 +173,18 @@ void setup() {
  */
 void loop() {
   // Check is there is data on RX port from Wixel
-  while (uartPort.available() > 0) {
-    int receivedValue = uartPort.read();
+  while (Serial.available() > 0) {
+    int receivedValue = Serial.read();
     // Display data for debugging
     #ifdef IS_DEBUG
-    Serial.write("Received: ");
+    SendDebugText("Received: ");
     char parsedText[5];
     IntToCharArray(receivedValue, parsedText);
-    Serial.write(parsedText);
-    Serial.write(" (");
-    Serial.write(char(receivedValue));
-    Serial.write(")");
-    Serial.println();
+    SendDebugText(parsedText);
+    SendDebugText(" (");
+    SendDebugText(char(receivedValue));
+    SendDebugText(")");
+    SendDebugText("\r\n");
     #endif
     // We should wait for the AT+RESET message before parsing anything else. 
     // I don't see the point of using any other character before that for now.
@@ -166,10 +197,47 @@ void loop() {
   }
 
   // If there is data comming from Serial port, send it back to the Wixel (For debugging purpose)
-  while (Serial.available() > 0) {
+  /*while (Serial.available() > 0) {
     unsigned char inByte = Serial.read();
-    uartPort.write(inByte);
+    Serial.write(inByte);
     Serial.print(inByte);
+  }*/
+}
+
+
+/*
+ * Function SendDebugText
+ * ----------------------
+ * This method is used to send DEBUG text by Wifi or Serial
+ * debugText: The text to be sent
+ */
+void SendDebugText(String debugText){
+  if (WiFi.status() == WL_CONNECTED) {
+    _debugClient.print(debugText);
+  }
+}
+
+/*
+ * Function SendDebugText
+ * ----------------------
+ * This method is used to send DEBUG text by Wifi or Serial
+ * debugText: The text to be sent
+ */
+void SendDebugText(char debugText){
+  if (WiFi.status() == WL_CONNECTED) {
+    _debugClient.print(debugText);
+  }
+}
+
+/*
+ * Function SendDebugText
+ * ----------------------
+ * This method is used to send DEBUG text by Wifi or Serial
+ * debugText: The text to be sent
+ */
+void SendDebugText(char* debugText){
+  if (WiFi.status() == WL_CONNECTED) {
+    _debugClient.print(debugText);
   }
 }
 
@@ -263,7 +331,7 @@ void ManageConnectionNotStarted(int receivedValue) {
   {
     _communicationStarted = true;
     #ifdef IS_DEBUG
-    Serial.write("AT+RESET was received. Wixel communication officially started\r\n");
+    SendDebugText("AT+RESET was received. Wixel communication officially started\r\n");
     #endif
   }
 }
@@ -288,11 +356,11 @@ void ManageConnectionStarted(int receivedValue) {
   {
     #ifdef IS_DEBUG
     // We have a complete messsage to process
-    Serial.print("Looks like we have a full message to process! (");
+    SendDebugText("Looks like we have a full message to process! (");
     char textNbChar [5];
     IntToCharArray((int)_message[0], textNbChar);
-    Serial.print(textNbChar);
-    Serial.print(" characters) \r\n");
+    SendDebugText(textNbChar);
+    SendDebugText(" characters) \r\n");
     #endif
     // Process message
     ProcessWixelMessage(_message);
@@ -317,6 +385,90 @@ uint32_t CharArrayToInt32(char* array)
   return returnValue;*/
 }
 
+
+
+/*
+ * Function: SendAppEngineData
+ * ---------------------------
+ * This function will send the Wixel Data to the Google App Engine
+ * 
+ * dexcomData: This is the Dexcom data to send to the AppEngine
+ */
+void SendAppEngineData(struct Dexcom_Packet_Struct dexcomData)
+{
+  //char transmitterId[ 16 ];
+  //sprintf(transmitterId,"%lu", dexcomData.txId);
+  uint32_t transmitterId = DexcomAsciiToSrc((char*)DEXCOM_TRANSMITTER_ID);
+  #ifdef IS_DEBUG
+  SendDebugText("Preparing to send data to App Engine:\r\n");
+  #endif
+  WiFiClient client;
+  if (!client.connect(appEngineHost, HTTP_PORT)) {
+    #ifdef IS_DEBUG
+    SendDebugText("Can't connect to App Engine :(\r\n");
+    #endif
+  }
+  else
+  {
+    #ifdef IS_DEBUG
+    SendDebugText("Connected to App Engine :)\r\n\r\n");
+    #endif
+  }
+  #ifdef IS_DEBUG
+  SendDebugText("Sending data to App Engine:\r\n");
+  #endif
+  String url = "/receiver.cgi?zi=";
+  url += transmitterId;
+  url += "&pc="; 
+  url += "0"; // Passcode
+  url += "&lv=";
+  url += dexcomData.raw; // Raw Data
+  url += "&lf=";
+  url += dexcomData.filtered; // Filtered Data
+  url += "&db=";
+  url += dexcomData.battery; // Battery (Dexcom)
+  url += "&ts=";
+  url += "0"; // Capture Date Time str(int(time.time()) - (int(data.ts) / 1000)) + "000"
+  url += "&bp=";
+  url += "62"; // Uploader Battery Life
+  url += "&bm=";
+  url += 3755; // ?
+  url += "&ct=";
+  url += 22; // ?
+  url += "&gl="; 
+  url += 0; // Geolocation ?
+
+  #ifdef IS_DEBUG
+  SendDebugText("Sending data: ");
+  SendDebugText(url);
+  SendDebugText("\r\n");
+  #endif
+  // This will send the request to the server
+  client.print(String("GET ") + url + " HTTP/1.1\r\n" +
+               "Host: " + appEngineHost + "\r\n" + 
+               "Connection: close\r\n\r\n");
+  unsigned long timeout = millis();
+  while (client.available() == 0) {
+    if (millis() - timeout > 5000) {
+      #ifdef IS_DEBUG
+      SendDebugText(">>> Client Timeout !\r\n");
+      #endif
+      client.stop();
+      return;
+    }
+  }
+
+  #ifdef IS_DEBUG
+  // Read all the lines of the reply from server and print them to Debug if available
+  while(client.available()){
+    String line = client.readStringUntil('\0');
+    SendDebugText(line);
+  }
+  #endif
+  Serial.println("closing connection");
+  client.stop();
+}
+
 /*
  * Function: ProcessWixelMessage
  * -----------------------------
@@ -329,85 +481,68 @@ void ProcessWixelMessage(unsigned char* message)
   unsigned int messageLength = message[0];
   unsigned int messageType = (int)message[1];
   #ifdef IS_DEBUG
-  Serial.print("Message type to process:");
-  Serial.print(message[1]);
-  Serial.print(":");
-  Serial.print((unsigned int)message[1]);
+  SendDebugText("Message type to process:");
+  SendDebugText(message[1]);
+  SendDebugText(":");
+  SendDebugText((unsigned int)message[1]);
   #endif
   switch(messageType)
   {
     case WIXEL_COMM_RX_DATA_PACKET:
-      Serial.print("We received a Dexcom Data Packet w00t!\r\n");
+      SendDebugText("We received a Dexcom Data Packet w00t!\r\n");
       struct Dexcom_Packet_Struct dexcomData;
       memcpy(&dexcomData, &message[2], sizeof(dexcomData)); //messageLength - 2);
-      /*char intCharSource[5];
-      dexcomData.len = message[2];
-      intCharSource[0] = message[3];
-      intCharSource[1] = message[4];
-      intCharSource[2] = message[5];
-      intCharSource[3] = message[6];*/
-      //strncpy(intCharSource, (char*)message[3], 4);
-      /*Serial.print("int char source:");
-      Serial.print(intCharSource);
-      Serial.print("\r\n");*/
-      //dexcomData.dest_addr = CharArrayToInt32(intCharSource);
-      //strncpy(intCharSource, (char*)message[7], 4);
-      //dexcomData.src_addr = CharArrayToInt32(intCharSource);
-      Serial.print("Dest_Addr: ");
-      Serial.print(dexcomData.dest_addr);
-      Serial.print("\r\nSrc_Addr: ");
-      Serial.print(dexcomData.src_addr);
-      Serial.print("\r\nPort: ");
-      Serial.print(dexcomData.port);
-      Serial.print("\r\nDevice Info: ");
-      Serial.print(dexcomData.device_info);
-      Serial.print("\r\ntxId: ");
-      Serial.print(dexcomData.txId);
-      Serial.print("\r\nraw: ");
-      Serial.print(dexcomData.raw);
-      Serial.print("\r\nfiltered: ");
-      Serial.print(dexcomData.filtered);
-      Serial.print("\r\nbattery: ");
-      Serial.print(dexcomData.battery);
-      Serial.print("\r\nunknown: ");
-      Serial.print(dexcomData.unknown);
-      Serial.print("\r\nchecksum: ");
-      Serial.print(dexcomData.checksum);
-      Serial.print("\r\nRSSI: ");
-      Serial.print(dexcomData.RSSI);
-      Serial.print("\r\nLQI: ");
-      Serial.print(dexcomData.LQI);
-      Serial.print("\r\n");
+      SendDebugText("Dest_Addr: ");
+      SendDebugText(dexcomData.dest_addr);
+      SendDebugText("\r\nSrc_Addr: ");
+      SendDebugText(dexcomData.src_addr);
+      SendDebugText("\r\nPort: ");
+      SendDebugText(dexcomData.port);
+      SendDebugText("\r\nDevice Info: ");
+      SendDebugText(dexcomData.device_info);
+      SendDebugText("\r\ntxId: ");
+      SendDebugText(dexcomData.txId);
+      SendDebugText("\r\nraw: ");
+      SendDebugText(dexcomData.raw);
+      SendDebugText("\r\nfiltered: ");
+      SendDebugText(dexcomData.filtered);
+      SendDebugText("\r\nbattery: ");
+      SendDebugText(dexcomData.battery);
+      SendDebugText("\r\nunknown: ");
+      SendDebugText(dexcomData.unknown);
+      SendDebugText("\r\nchecksum: ");
+      SendDebugText(dexcomData.checksum);
+      SendDebugText("\r\nRSSI: ");
+      SendDebugText(dexcomData.RSSI);
+      SendDebugText("\r\nLQI: ");
+      SendDebugText(dexcomData.LQI);
+      SendDebugText("\r\n");
+      SendAppEngineData(dexcomData);
     case WIXEL_COMM_RX_SEND_BEACON:
       if(messageLength == 7){
         // Spit the Wixel's Transmitter ID out of the message
         uint32_t transmitterIdSrc;
         memcpy(&transmitterIdSrc, &message[2], 4);
-        /*uint32_t transmitterIdSrc = ((uint32_t)message[2] << 0) ||
-                           ((uint32_t)message[3] << 8) ||
-                           ((uint32_t)message[4] << 16) ||
-                           ((uint32_t)message[5] << 24);*/
-        
-        //memcpy(&transmitterIdSrc, (char*)message[2], 4);
+
         #ifdef IS_DEBUG
-        Serial.print("Transmitter ID Src:");
-        Serial.print(transmitterIdSrc);
-        Serial.print("\r\n");
+        SendDebugText("Transmitter ID Src:");
+        SendDebugText(transmitterIdSrc);
+        SendDebugText("\r\n");
         #endif
         char* transmitterIdAscii = DexcomSrcToAscii(transmitterIdSrc);
         #ifdef IS_DEBUG
-        Serial.print("Wixel thinks the transmitter ID is: ");
-        Serial.print(transmitterIdAscii);        
-        Serial.print("\r\n");
+        SendDebugText("Wixel thinks the transmitter ID is: ");
+        SendDebugText(transmitterIdAscii);
+        SendDebugText("\r\n");
         #endif
         // Check if it's the proper transmitter ID
         if (strcmp(transmitterIdAscii, DEXCOM_TRANSMITTER_ID) == 0)
         {
-          Serial.print("Good, the Wixel has proper transmitter ID\r\n");
+          SendDebugText("Good, the Wixel has proper transmitter ID\r\n");
         }
         else
         {
-          Serial.print("Lol, send the proper Transmitter ID to the Wixel right now!\r\n");
+          SendDebugText("Lol, send the proper Transmitter ID to the Wixel right now!\r\n");
           uint32_t dexcomTrxIDSrc = DexcomAsciiToSrc((char*)DEXCOM_TRANSMITTER_ID);
           SendMessage(WIXEL_COMM_TX_SEND_TRANSMITTER_ID, dexcomTrxIDSrc);
         }
@@ -415,9 +550,9 @@ void ProcessWixelMessage(unsigned char* message)
       }
       break;
     default:
-      Serial.print("Unkown message :/");
-      Serial.print(messageType);
-      Serial.print("\r\n");
+      SendDebugText("Unkown message :/");
+      SendDebugText(messageType);
+      SendDebugText("\r\n");
   }
 }
 
@@ -433,26 +568,26 @@ void SendMessage(unsigned int messageId, uint32_t messageContent)
   unsigned int messageLength = 6; // Message content (uint32_t = 4 bytes) + message length byte + message id byte
   char textNbChar [5];
   IntToCharArray(messageLength, textNbChar);
-  Serial.print("Message Length: ");
-  Serial.print(textNbChar);
-  Serial.print("\r\n");
-  uartPort.write(messageLength);
-  uartPort.write(messageId);
-  Serial.print("Message ID: ");
-  Serial.print(messageId);
-  Serial.print("\r\n");
-  uartPort.write( lowByte(messageContent) );
-  uartPort.write( lowByte(messageContent >> 8) );
-  uartPort.write( lowByte(messageContent >> 16) );
-  uartPort.write( lowByte(messageContent >> 24) );
-  Serial.print("Message Content: ");
-  Serial.print(messageContent);
-  Serial.print("\r\n");
+  SendDebugText("Message Length: ");
+  SendDebugText(textNbChar);
+  SendDebugText("\r\n");
+  Serial.write(messageLength);
+  Serial.write(messageId);
+  SendDebugText("Message ID: ");
+  SendDebugText(messageId);
+  SendDebugText("\r\n");
   Serial.write( lowByte(messageContent) );
   Serial.write( lowByte(messageContent >> 8) );
   Serial.write( lowByte(messageContent >> 16) );
   Serial.write( lowByte(messageContent >> 24) );
-  Serial.print("\r\n");
+  SendDebugText("Message Content: ");
+  SendDebugText(messageContent);
+  SendDebugText("\r\n");
+  SendDebugText( lowByte(messageContent) );
+  SendDebugText( lowByte(messageContent >> 8) );
+  SendDebugText( lowByte(messageContent >> 16) );
+  SendDebugText( lowByte(messageContent >> 24) );
+  SendDebugText("\r\n");
 }
 
 // 
@@ -468,13 +603,13 @@ void SendMessage(unsigned int messageId, char* messageContent)
   unsigned int messageLength = strlen(messageContent) + 2; // Message content + message length byte + message id byte
   char textNbChar [5];
   IntToCharArray(messageLength, textNbChar);
-  Serial.print("Message Length: ");
-  Serial.print(textNbChar);
-  Serial.print("\r\n");
-  uartPort.write(messageLength);
+  SendDebugText("Message Length: ");
+  SendDebugText(textNbChar);
+  SendDebugText("\r\n");
+  Serial.write(messageLength);
   
-  uartPort.write(messageId);
-  uartPort.write(messageContent);
+  Serial.write(messageId);
+  Serial.write(messageContent);
 }
 
 
