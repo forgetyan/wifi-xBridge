@@ -48,7 +48,7 @@
  * Wixel Configuration
  */
 const String COMMUNICATION_STARTED_STRING = "AT+RESET";
-const char* DEXCOM_TRANSMITTER_ID = "6BCFK\0";
+const char DEXCOM_TRANSMITTER_ID[6] = "6BCFK";
 
 /*
  * Wifi Configuration
@@ -79,7 +79,7 @@ Data Packet - Bridge to App.  Sends the Dexcom transmitter data, and the bridge 
   
 Data Acknowledge Packet - App to Bridge.  Sends an ack of the Data Packet and tells the wixel to go to sleep.
   0x02  - length of packet.
-  0xF0  - Packet type (F0 means acknowleged, go to sleep.
+  0xF0  - Packet type (F0 means acknowleged, go to sleep)
   
 TXID packet - App to Bridge.  Sends the TXID the App wants the bridge to filter on.  In response to a Data packet or beacon packet being wrong.
   0x06  - Length of the packet.
@@ -94,7 +94,7 @@ Beacon Packet - Bridge to App.  Sends the TXID it is filtering on to the app, so
  */
 // All RX Message (From Wixel)
 #define WIXEL_COMM_RX_DATA_PACKET 0x00 // The Wixel send this message when it receive Dexcom packet
-#define WIXEL_COMM_RX_SEND_BEACON 0xF1 // The Wixel send this message when starting to know if the Transmitter ID is ok
+#define WIXEL_COMM_RX_SEND_BEACON 0xF1 // The Wixel send this message when it wants to know if the Transmitter ID is ok
 #define IS_DEBUG
 
 // All TX Message (To Wixel)
@@ -122,6 +122,19 @@ typedef struct Dexcom_Packet_Struct
   uint8_t LQI;
 } Dexcom_packet;
 
+// structure of a raw record we receive from the Wixel.
+typedef struct Wixel_RawRecord_Struct
+{
+  uint32_t  raw;  //"raw" BGL value.
+  uint32_t  filtered; //"filtered" BGL value 
+  uint8_t dex_battery;  //battery value
+  uint8_t my_battery; //xBridge battery value
+  uint32_t  dex_src_id;   //raw TXID of the Dexcom Transmitter
+  //int8  RSSI; //RSSI level of the transmitter, used to determine if it is in range.
+  //uint8 txid; //ID of this transmission.  Essentially a sequence from 0-63
+  uint8_t function; // Byte representing the xBridge code funcitonality.  01 = this level.
+} RawRecord;
+
 // software serial #1: RX = digital pin 2, TX = digital pin 3
 //SoftwareSerial uartPort(2, 3);
 
@@ -139,9 +152,6 @@ unsigned char* _message;
  * Setup method called once when starting the Arduino
  */
 void setup() {
-  // Wait for the Wixel to boot First
-  delay(3000);
-  
   // Open serial communications
   Serial.begin(9600);
   /*while (!Serial) {
@@ -236,6 +246,18 @@ void SendDebugText(char debugText){
  * debugText: The text to be sent
  */
 void SendDebugText(char* debugText){
+  if (WiFi.status() == WL_CONNECTED) {
+    _debugClient.print(debugText);
+  }
+}
+
+void SendDebugText(uint32_t debugText){
+  if (WiFi.status() == WL_CONNECTED) {
+    _debugClient.print(debugText);
+  }
+}
+
+void SendDebugText(int debugText){
   if (WiFi.status() == WL_CONNECTED) {
     _debugClient.print(debugText);
   }
@@ -336,6 +358,10 @@ void ManageConnectionNotStarted(int receivedValue) {
   }
 }
 
+long timeElapsedLastReception;
+// delay in milliseconds for maximum time between reception of message
+unsigned int maxIntervalBetweenReception = 2000;
+
 /*
  * Function: ManageConnectionStarted
  * ---------------------------------
@@ -344,7 +370,18 @@ void ManageConnectionNotStarted(int receivedValue) {
  * receivedValue: The value we just received on Serial Port
 */
 void ManageConnectionStarted(int receivedValue) {
+  long currentTimeElapsed = millis();
+  if (currentTimeElapsed > timeElapsedLastReception + maxIntervalBetweenReception) 
+  {
+    // Reset message reception
+    _messageLength = 0;
+    _messagePosition = 0;
+  }
   if (_messageLength <= 0) {
+    if (receivedValue == 0) // 0 length message...impossible skip
+    {
+      return;
+    }
     // First byte is to determine the message length
     _messageLength = receivedValue;
     _message = new unsigned char[_messageLength];
@@ -367,6 +404,7 @@ void ManageConnectionStarted(int receivedValue) {
     // Reset message vars
     _messageLength = 0;
   }
+  timeElapsedLastReception = currentTimeElapsed;
 }
 
 /*
@@ -386,7 +424,7 @@ uint32_t CharArrayToInt32(char* array)
 }
 
 
-
+long lastTransmission;
 /*
  * Function: SendAppEngineData
  * ---------------------------
@@ -394,11 +432,11 @@ uint32_t CharArrayToInt32(char* array)
  * 
  * dexcomData: This is the Dexcom data to send to the AppEngine
  */
-void SendAppEngineData(struct Dexcom_Packet_Struct dexcomData)
+void SendAppEngineData(struct Wixel_RawRecord_Struct dexcomData)
 {
   //char transmitterId[ 16 ];
   //sprintf(transmitterId,"%lu", dexcomData.txId);
-  uint32_t transmitterId = DexcomAsciiToSrc((char*)DEXCOM_TRANSMITTER_ID);
+  uint32_t transmitterId = dexcomData.dex_src_id;//DexcomAsciiToSrc((char*)DEXCOM_TRANSMITTER_ID);
   #ifdef IS_DEBUG
   SendDebugText("Preparing to send data to App Engine:\r\n");
   #endif
@@ -426,11 +464,11 @@ void SendAppEngineData(struct Dexcom_Packet_Struct dexcomData)
   url += "&lf=";
   url += dexcomData.filtered; // Filtered Data
   url += "&db=";
-  url += dexcomData.battery; // Battery (Dexcom)
+  url += dexcomData.dex_battery; // Battery (Dexcom)
   url += "&ts=";
-  url += "0"; // Capture Date Time str(int(time.time()) - (int(data.ts) / 1000)) + "000"
+  url += millis() - lastTransmission; // Capture Date Time str(int(time.time()) - (int(data.ts) / 1000)) + "000"
   url += "&bp=";
-  url += "62"; // Uploader Battery Life
+  url += dexcomData.my_battery; // Uploader Battery Life
   url += "&bm=";
   url += 3755; // ?
   url += "&ct=";
@@ -465,8 +503,9 @@ void SendAppEngineData(struct Dexcom_Packet_Struct dexcomData)
     SendDebugText(line);
   }
   #endif
-  Serial.println("closing connection");
+  SendDebugText("\r\nclosing connection\r\n");
   client.stop();
+  lastTransmission = millis();
 }
 
 /*
@@ -490,33 +529,43 @@ void ProcessWixelMessage(unsigned char* message)
   {
     case WIXEL_COMM_RX_DATA_PACKET:
       SendDebugText("We received a Dexcom Data Packet w00t!\r\n");
-      struct Dexcom_Packet_Struct dexcomData;
-      memcpy(&dexcomData, &message[2], sizeof(dexcomData)); //messageLength - 2);
-      SendDebugText("Dest_Addr: ");
-      SendDebugText(dexcomData.dest_addr);
-      SendDebugText("\r\nSrc_Addr: ");
-      SendDebugText(dexcomData.src_addr);
-      SendDebugText("\r\nPort: ");
-      SendDebugText(dexcomData.port);
-      SendDebugText("\r\nDevice Info: ");
-      SendDebugText(dexcomData.device_info);
-      SendDebugText("\r\ntxId: ");
-      SendDebugText(dexcomData.txId);
-      SendDebugText("\r\nraw: ");
+      SendMessage(WIXEL_COMM_TX_ACKNOWLEDGE_DATA_PACKET);
+      struct Wixel_RawRecord_Struct dexcomData;
+      //memcpy(&dexcomData, &message[2], sizeof(dexcomData)); //messageLength - 2);
+      
+      dexcomData.raw = message[5];
+      dexcomData.raw = (dexcomData.raw << 8) + message[4];
+      dexcomData.raw = (dexcomData.raw << 8) + message[3];
+      dexcomData.raw = (dexcomData.raw << 8) + message[2];
+      
+      dexcomData.filtered = message[9];
+      dexcomData.filtered = (dexcomData.filtered << 8) + message[8];
+      dexcomData.filtered = (dexcomData.filtered << 8) + message[7];
+      dexcomData.filtered = (dexcomData.filtered << 8) + message[6];
+      
+      dexcomData.dex_battery = message[10];
+      
+      dexcomData.my_battery = message[11];
+      
+      dexcomData.dex_src_id = message[15];
+      dexcomData.dex_src_id = (dexcomData.dex_src_id << 8) + message[14];
+      dexcomData.dex_src_id = (dexcomData.dex_src_id << 8) + message[13];
+      dexcomData.dex_src_id = (dexcomData.dex_src_id << 8) + message[12];
+
+      dexcomData.function = message[16];
+      
+      SendDebugText("\r\raw: ");
       SendDebugText(dexcomData.raw);
       SendDebugText("\r\nfiltered: ");
       SendDebugText(dexcomData.filtered);
-      SendDebugText("\r\nbattery: ");
-      SendDebugText(dexcomData.battery);
-      SendDebugText("\r\nunknown: ");
-      SendDebugText(dexcomData.unknown);
-      SendDebugText("\r\nchecksum: ");
-      SendDebugText(dexcomData.checksum);
-      SendDebugText("\r\nRSSI: ");
-      SendDebugText(dexcomData.RSSI);
-      SendDebugText("\r\nLQI: ");
-      SendDebugText(dexcomData.LQI);
-      SendDebugText("\r\n");
+      SendDebugText("\r\ndex_battery: ");
+      SendDebugText(dexcomData.dex_battery);
+      SendDebugText("\r\nmy_battery: ");
+      SendDebugText(dexcomData.my_battery);
+      SendDebugText("\r\ndex_src_id: ");
+      SendDebugText(dexcomData.dex_src_id);
+      SendDebugText("\r\nfunction: ");
+      SendDebugText(dexcomData.function);
       SendAppEngineData(dexcomData);
     case WIXEL_COMM_RX_SEND_BEACON:
       if(messageLength == 7){
@@ -554,6 +603,27 @@ void ProcessWixelMessage(unsigned char* message)
       SendDebugText(messageType);
       SendDebugText("\r\n");
   }
+}
+
+/*
+ * Function: SendMessage
+ * ---------------------
+ * This method is used to send a message
+ * messageId: The message ID to send
+ */
+void SendMessage(unsigned int messageId)
+{
+  unsigned int messageLength = 2; // Message length byte + message id byte
+  char textNbChar [5];
+  IntToCharArray(messageLength, textNbChar);
+  SendDebugText("Message Length: ");
+  SendDebugText(textNbChar);
+  SendDebugText("\r\n");
+  Serial.write(messageLength);
+  Serial.write(messageId);
+  SendDebugText("Message ID: ");
+  SendDebugText(messageId);
+  SendDebugText("\r\n");
 }
 
 /*
