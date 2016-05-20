@@ -42,7 +42,9 @@
 
 #include <SoftwareSerial.h>
 #include <ESP8266WiFi.h>
+#include "WebServer.h"
 #include <ESP8266WiFiMulti.h>
+#include <ESP8266WebServer.h>
 
 /*
  * Wixel Configuration
@@ -100,9 +102,12 @@ Beacon Packet - Bridge to App.  Sends the TXID it is filtering on to the app, so
 // All TX Message (To Wixel)
 #define WIXEL_COMM_TX_ACKNOWLEDGE_DATA_PACKET 0xF0 // This message send and acknowledge packet to allow Wixel to go in sleep mode
 #define WIXEL_COMM_TX_SEND_TRANSMITTER_ID 0x01 // This message send the Transmitter ID to the Wixel
-#define WIXEL_COMM_TX_SEND_DEBUG 0x64 // This message ask the Wixel to send debug output ON or OFF
+#define WIXEL_COMM_TX_SEND_DEBUG 0x64 // This message ask the Wixel to flip the Debug flag ON or OFF
+#define WIXEL_COMM_TX_SLEEP_BLE 0x42 // This message ask the Wixel to flip the BLE Sleeping flag ON or OFF
+#define WIXEL_COMM_TX_DO_LED 0x4C // This message ask the Wixel to flip the Led Sleeping flag ON or OFF
 
 #define DEXBRIDGE_PROTO_LEVEL 0x01
+
 
 #define HTTP_PORT 80
 typedef struct Dexcom_Packet_Struct
@@ -146,6 +151,8 @@ int _messageLength = 0;
 int _messagePosition = 0;
 unsigned char* _message;
 
+WebServer webServer;
+
 /*
  * Function: setup
  * ---------------
@@ -154,25 +161,70 @@ unsigned char* _message;
 void setup() {
   // Open serial communications
   Serial.begin(9600);
+  delay(4000);
   /*while (!Serial) {
     ; // wait for serial port to connect. Needed for native USB port only
   }*/
+  webServer.start();
+  StartWifiConnection();
+  OpenDebugConnection();
+  // WiFi.onEvent(WiFiEvent);
   _communicationStarted = true;
+  #ifdef IS_DEBUG
+  SendDebugText("wifi-xBridge Started!\r\nDebugging mode ON\r\n");
+  #endif
+}
+
+/*
+void WiFiEvent(WiFiEvent_t event) {
+    //Serial.printf("[WiFi-event] event: %d\n", event);
+
+    switch(event) {
+        case WIFI_EVENT_STAMODE_GOT_IP:
+            /*Serial.println("WiFi connected");
+            Serial.println("IP address: ");
+            Serial.println(WiFi.localIP());* /
+            break;
+        case WIFI_EVENT_STAMODE_DISCONNECTED:
+            //Serial.println("WiFi lost connection");
+            break;
+    }
+}*/
+
+void StartWifiConnection(){
   // Open WiFi connection
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
   }
+}
+
+void StopWifiConnection() {
+  WiFi.disconnect(true);
+}
+
+/*
+ * Function: OpenDebugConnection
+ * -----------------------------
+ * This method will open the connection with a dummy debug server
+ */
+void OpenDebugConnection(){
   // Open DEBUG connection
   _debugClient.connect(DEBUG_HOST, DEBUG_PORT);
-  SendDebugText("wifi-xBridge Started!\r\n");
-  SendDebugText("Debugging mode ");
+  SendDebugText("Connected!\r\n");
+}
+
+/*
+ * Function: CloseDebugConnection
+ * ------------------------------
+ * This method will close the connection with the debug server
+ */
+void CloseDebugConnection() {
   #ifdef IS_DEBUG
-  SendDebugText("ON");
-  #else
-  SendDebugText("OFF");
+  SendDebugText("Closing connection. Bye!\r\n");
   #endif
-  SendDebugText("\r\n");
+  // Close DEBUG connection
+  _debugClient.stop();
 }
 
 
@@ -182,6 +234,8 @@ void setup() {
  * Classic Arduino Loop method
  */
 void loop() {
+    //Serial.print("Test");
+  webServer.loop();
   // Check is there is data on RX port from Wixel
   while (Serial.available() > 0) {
     int receivedValue = Serial.read();
@@ -225,6 +279,8 @@ void SendDebugText(String debugText){
   if (WiFi.status() == WL_CONNECTED) {
     _debugClient.print(debugText);
   }
+  Serial.print(debugText);
+  CloseDebugConnection();
 }
 
 /*
@@ -237,6 +293,7 @@ void SendDebugText(char debugText){
   if (WiFi.status() == WL_CONNECTED) {
     _debugClient.print(debugText);
   }
+  Serial.write(debugText);
 }
 
 /*
@@ -249,18 +306,21 @@ void SendDebugText(char* debugText){
   if (WiFi.status() == WL_CONNECTED) {
     _debugClient.print(debugText);
   }
+  Serial.write(debugText);
 }
 
 void SendDebugText(uint32_t debugText){
   if (WiFi.status() == WL_CONNECTED) {
     _debugClient.print(debugText);
   }
+  Serial.write(debugText);
 }
 
 void SendDebugText(int debugText){
   if (WiFi.status() == WL_CONNECTED) {
     _debugClient.print(debugText);
   }
+  Serial.write(debugText);
 }
 
 /* All possible values of Dexcom Transmitter ID Characters*/
@@ -517,6 +577,11 @@ void SendAppEngineData(struct Wixel_RawRecord_Struct dexcomData)
  */
 void ProcessWixelMessage(unsigned char* message)
 {
+  #ifdef IS_DEBUG
+  OpenDebugConnection();
+  #else
+  StartWifiConnection();
+  #endif
   unsigned int messageLength = message[0];
   unsigned int messageType = (int)message[1];
   #ifdef IS_DEBUG
@@ -603,6 +668,12 @@ void ProcessWixelMessage(unsigned char* message)
       SendDebugText(messageType);
       SendDebugText("\r\n");
   }
+  #ifdef IS_DEBUG
+  CloseDebugConnection();
+  #else
+  StopWifiConnection();
+  #endif
+  
 }
 
 /*
