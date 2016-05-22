@@ -31,6 +31,12 @@ String WebServer::padding( int number, byte width ) {
   return response;    
 }
 
+void WebServer::handleStylesheet() {
+  String response = "";
+  response += "<html>";
+  _webServer.send(200, "text/html", response);
+}
+
 void WebServer::handleRoot() {
   int sec = millis() / 1000;
   int min = sec / 60;

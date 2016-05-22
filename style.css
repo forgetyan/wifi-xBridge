@@ -1,0 +1,316 @@
+body {
+	font-family: Arial, sans-serif;
+	background-color: #9EDFFF;
+	
+}
+h1 {
+	color:  3377FF;
+	margin-left: 20px;
+	font-size: 30px;
+	text-align: center;
+	text-shadow: 
+	  -1px -1px 1px #666666, 
+	  2px 2px 1px #333333;
+}
+
+.innerPage{
+	background-color: white;
+	border: 1px solid black;
+	padding: 8px;
+	box-shadow: 10px 10px 5px #5888C8;
+	//color: #9E8042;
+	margin: 0 auto;
+	border: 2px solid #000080;
+	border-radius: 10px/10px;
+	text-align: center;
+}
+
+h2 {
+	color: #000080;
+	
+}
+h2.First {
+	
+	margin-top: 4px;
+}
+
+table {
+	border-collapse: collapse;
+	width:100%;
+	color: #800000;
+	margin-bottom: 15px
+}
+th, td {
+	padding-top: 15px;
+	padding-bottom: 15px;
+	border-bottom: 1px solid #ddd;
+}
+
+.button {
+  font-size: 1em;
+  padding: 10px;
+  border: 2px solid #000080;
+  border-radius: 20px/50px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.3s ease-out;
+  margin: 5px;
+}
+
+.button:hover {
+  background: #9EDFFF;
+}
+
+.overlay {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.7);
+  transition: opacity 500ms;
+  visibility: hidden;
+  opacity: 0;
+}
+
+.overlay:target {
+  visibility: visible;
+  opacity: 1;
+}
+
+.popup {
+  margin: 70px auto;
+  padding: 20px;
+  background: #fff;
+  border-radius: 5px;
+  width: 30%;
+  position: relative;
+  transition: all 5s ease-in-out;
+  text-align: center;
+}
+
+.popup h2 {
+  margin-top: 0;
+  color: #333;
+  font-family: Tahoma, Arial, sans-serif;
+  
+}
+.popup .close {
+  position: absolute;
+  top: 20px;
+  right: 30px;
+  transition: all 200ms;
+  font-size: 30px;
+  font-weight: bold;
+  text-decoration: none;
+  color: #333;
+}
+.popup .close:hover {
+  color: #3377FF;
+}
+.popup .content {
+  max-height: 90%;
+  overflow: auto;
+}
+
+@media screen and (max-width: 700px){
+  .popup{
+	width: 70%;
+  }
+}
+
+.textbox {
+	border: 5px solid white; 
+	-webkit-box-shadow: 
+	  inset 0 0 8px  rgba(0,0,0,0.1),
+			0 0 16px rgba(0,0,0,0.1); 
+	-moz-box-shadow: 
+	  inset 0 0 8px  rgba(0,0,0,0.1),
+			0 0 16px rgba(0,0,0,0.1); 
+	box-shadow: 
+	  inset 0 0 8px  rgba(0,0,0,0.1),
+			0 0 16px rgba(0,0,0,0.1); 
+	padding: 15px;
+	background: rgba(255,255,255,0.5);
+	margin: 0 0 7px 0;
+	font-size: 20px;
+}
+
+.label {
+	font-size: 1.17em;
+	font-weight: bold;
+}
+
+.wifi-symbol {
+  display: none;
+}
+.wifi-symbol [foo], .wifi-symbol {
+  display: block;
+  position: absolute;
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  margin-top: -72px;
+  margin-left: 60px;
+  -ms-transform: rotate(-45deg) translate(-100px);
+  -moz-transform: rotate(-45deg) translate(-100px);
+  -o-transform: rotate(-45deg) translate(-100px);
+  -webkit-transform: rotate(-45deg) translate(-100px);
+  transform: rotate(-45deg) translate(-100px);
+}
+.wifi-symbol .wifi-circle {
+  box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  display: block;
+  width: 100%;
+  height: 100%;
+  font-size: 2.86px;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  border-color: #000055;
+  border-style: solid;
+  border-width: 1em 1em 0 0;
+  -webkit-border-radius: 0 100% 0 0;
+  border-radius: 0 100% 0 0;
+  opacity: 0;
+  -o-animation: wifianimation 3s infinite;
+  -moz-animation: wifianimation 3s infinite;
+  -webkit-animation: wifianimation 3s infinite;
+  animation: wifianimation 3s infinite;
+}
+.wifi-symbol .wifi-circle.first {
+  -o-animation-delay: 800ms;
+  -moz-animation-delay: 800ms;
+  -webkit-animation-delay: 800ms;
+  animation-delay: 800ms;
+}
+.wifi-symbol .wifi-circle.second {
+  width: 5em;
+  height: 5em;
+  -o-animation-delay: 400ms;
+  -moz-animation-delay: 400ms;
+  -webkit-animation-delay: 400ms;
+  animation-delay: 400ms;
+}
+.wifi-symbol .wifi-circle.third {
+  width: 3em;
+  height: 3em;
+}
+.wifi-symbol .wifi-circle.fourth {
+  width: 1em;
+  height: 1em;
+  opacity: 1;
+  background-color: #000055;
+  -o-animation: none;
+  -moz-animation: none;
+  -webkit-animation: none;
+  animation: none;
+}
+
+@-o-keyframes wifianimation {
+  0% {
+    opacity: 0.4;
+  }
+  5% {
+    opactiy: 1;
+  }
+  6% {
+    opactiy: 0.1;
+  }
+  100% {
+    opactiy: 0.1;
+  }
+}
+@-moz-keyframes wifianimation {
+  0% {
+    opacity: 0.4;
+  }
+  5% {
+    opactiy: 1;
+  }
+  6% {
+    opactiy: 0.1;
+  }
+  100% {
+    opactiy: 0.1;
+  }
+}
+@-webkit-keyframes wifianimation {
+  0% {
+    opacity: 0.4;
+  }
+  5% {
+    opactiy: 1;
+  }
+  6% {
+    opactiy: 0.1;
+  }
+  100% {
+    opactiy: 0.1;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.sizing-box {
+  height: 20px;
+  width: 80px;
+}
+
+.signal-bars {
+  display: inline-block;
+}
+
+.signal-bars .bar {
+  width: 14%;
+  margin-left: 0%;
+  min-height: 20%;
+  display: inline-block;
+}
+
+.signal-bars .bar.first-bar {
+  height: 20%;
+}
+
+.signal-bars .bar.second-bar {
+  height: 40%;
+}
+
+.signal-bars .bar.third-bar {
+  height: 60%;
+}
+
+.signal-bars .bar.fourth-bar {
+  height: 80%;
+}
+
+.signal-bars .bar.fifth-bar {
+  height: 99%;
+}
+
+.good .bar {
+  background-color: #16a085;
+  border: thin solid #12816b;
+}
+
+.bad .bar {
+  background-color: #e74c3c;
+  border: thin solid #a82315;
+}
+
+.ok .bar {
+  background-color: #f1c40f;
+  border: thin solid #d0a90c;
+}
+
+.four-bars .bar.fifth-bar,
+.three-bars .bar.fifth-bar,
+.three-bars .bar.fourth-bar,
+.one-bar .bar:not(.first-bar),
+.two-bars .bar:not(.first-bar):not(.second-bar) {
+  background-color: #fafafa;
+  border: thin solid #f3f3f3;
+}

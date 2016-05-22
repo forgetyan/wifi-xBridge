@@ -1,58 +1,105 @@
 <html>
-	<header>
-		<style>
-			body {
-				background-color: lightblue;
-			}
-			h1 {
-				color: navy;
-				margin-left: 20px;
-				font-size: 30px;
-				text-align: center;
-			}
-			h2.First {
-				margin-top: 4px;
-			}
-			.innerPage{
-				background-color: white;
-				border: 1px solid black;
-				padding: 5px;
-				box-shadow: 10px 10px 5px #888888;
-			}
-			table {
-				border-collapse: collapse;
-				width:100%;
-			}
-			table {
-				//border: 1px solid black;
-			}
-			th, td {
-				padding: 15px;
-				text-align: left;
-			}
-			th, td {
-				border-bottom: 1px solid #ddd;
-			}
-		</style>
-	</header>
+	<head>
+		<link rel="stylesheet" type="text/css" href="style.css">
+		<script src="script.js"></script>
+		<meta name="viewport" content="width=device-width, initial-scale=1" /> 
+		<title>wifi-xBridge Configuration Page</title>
+	</head>
 	<body>
-	
+		<div id="popup" class="overlay">
+			<div class="popup">
+				<form method="post" action="SaveSSID" id="frmSaveSSID">
+					<h2>Add a new SSID</h2>
+					<a class="close" href="javascript:ClosePopup();">&times;</a>
+					<div class="content">
+						<p>Please enter the password for this wifi</p>
+						<input type="hidden" id="ssid_name"/>
+						<span class="label" id="ssid_name_text"></span>
+						<p><input id="ssid_password" name="ssid_password" type="password" class="textbox"/></p><br>
+						<p>
+							<div style="width:50%; float:left">
+								<a class="button" href="javascript:SaveSSID()">Save</a>
+							</div>
+							<div style="width:50%; float:left">
+								<a class="button" href="javascript:ClosePopup();">Close</a>
+							</div>
+						</p>
+						<br><br>
+					</div>
+				</form>
+			</div>
+		</div>
 		<h1>wifi-xBridge Configuration Page</h1>
-		
 		<div class="innerPage">
 			<h2 class="first">Uptime</h2>
 			00:00:52
 			<h2>Configured Wifi</h2>
 			<table>
 				<tr>
-					<th>SSID</th>
+					<th align="left">SSID</th>
 					<th></th>
 				</tr>
 				<tr>
 					<td>Drake</td>
-					<td><a href="">Delete</a></td>
+					<td align="right">
+						<a href="javascript:TestSSID('Drake'); " class="button">Test</a>
+						<a href="javascript:RemoveSSID('Drake');" class="button">Delete</a>
+					</td>
+				</tr>
+				<tr>
+					<td>Monique</td>
+					<td align="right">
+						<a href="javascript:TestSSID('Monique'); " class="button">Test</a>
+						<a href="javascript:RemoveSSID('Monique'); " class="button">Delete</a>
+					</td>
 				</tr>
 			</table>
+			
+			<br/><h2>Configure new Wifi</h2>
+				<a class="button"  onclick="return false;" href="ScanWifi()">
+				<div style="width:20px; height:20px;display: inline-block;">
+					<div class="wifi-symbol">
+					  <div class="wifi-circle first"></div>
+					  <div class="wifi-circle second"></div>
+					  <div class="wifi-circle third"></div>
+					  <div class="wifi-circle fourth"></div>
+					</div>
+				</div>
+				Scan for Wifi</a>
+			<table>
+				<tr>
+					<th align="left">SSID</th>
+					<th></th>
+					<th></th>
+				</tr>
+				<tr>
+					<td>Drake</td>
+					<td>
+						<div class="signal-bars mt1 sizing-box good four-bars">
+							<div class="first-bar bar"></div>
+							<div class="second-bar bar"></div>
+							<div class="third-bar bar"></div>
+							<div class="fourth-bar bar"></div>
+							<div class="fifth-bar bar"></div>
+						</div>
+					</td>
+					<td align="right"><a href="javascript:OpenSSIDPopup('Drake');" class="button">Add</a></td>
+				</tr>
+				<tr>
+					<td>Monique</td>
+					<td>
+						<div class="signal-bars mt1 sizing-box bad one-bar">
+							<div class="first-bar bar"></div>
+							<div class="second-bar bar"></div>
+							<div class="third-bar bar"></div>
+							<div class="fourth-bar bar"></div>
+							<div class="fifth-bar bar"></div>
+						</div>
+					</td>
+					<td align="right"><a href="javascript:OpenSSIDPopup('Monique');" class="button">Add</a></td>
+				</tr>
+			</table>
+			
 		</div>
 	</body>
 </html>
