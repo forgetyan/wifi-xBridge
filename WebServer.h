@@ -14,11 +14,14 @@ class WebServer {
     void loop();
   private:
     void handleRoot();
+    void handleStylesheet();
+    void handleJavascript();
     // const char* ACCESS_POINT_SSID;
     // const char* ACCESS_POINT_PWD;
     char* ACCESS_POINT_SSID;
     char* ACCESS_POINT_PWD;
     String padding(int number, byte width);
+    
 };
 
 #endif

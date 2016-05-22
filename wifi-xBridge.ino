@@ -191,6 +191,12 @@ void WiFiEvent(WiFiEvent_t event) {
     }
 }*/
 
+/*
+ * StartWifiConnection
+ * -------------------
+ * This method starts the Wifi Connection
+ * Todo: This should use a dynamic list of wifi
+ */
 void StartWifiConnection(){
   // Open WiFi connection
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
@@ -199,6 +205,11 @@ void StartWifiConnection(){
   }
 }
 
+/*
+ * StopWifiConnection
+ * ------------------
+ * This method should stop the wifi connection
+ */
 void StopWifiConnection() {
   WiFi.disconnect(true);
 }
