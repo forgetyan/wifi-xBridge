@@ -4,14 +4,14 @@
 #include "Arduino.h"
 #include <EEPROM.h>
 #include "EEPROMAnything.h"
-//#include <../../../../libraries/EEPROM/EEPROM.h>
 
 
 
 class Configuration {
   public:
+    void setMyTransmitterId(uint32_t transmitterId);
     uint32_t getTransmitterId();
-  private:
+//  private:
     
 };
 

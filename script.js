@@ -16,8 +16,6 @@ function SaveSSID() {
 	var ssid_password = document.getElementById("ssid_password");
 	var frmSaveSSID = document.getElementById("frmSaveSSID");
 	frmSaveSSID.submit();
-	//document.location.href='add/' + ssid_name.value;
-	//alert(ssid_password.value);
 }
 
 function ClosePopup() {
@@ -34,15 +32,28 @@ function RemoveSSID(ssid)
 }
 
 function TestSSID(ssid) {
-	var xhttp;
-	if (window.XMLHttpRequest) {
-        // code for IE7+, Firefox, Chrome, Opera, Safari
-        xhttp = new XMLHttpRequest();
-    } else {
-        // code for IE6, IE5
-        xhttp = new ActiveXObject("Microsoft.XMLHTTP");
-    }
+	var xhttp = new XMLHttpRequest();
 	xhttp.open("GET", "test/" + ssid, true);
+	xhttp.onreadystatechange = function () {
+		if(xhttp.readyState === XMLHttpRequest.DONEDONE && xhttp.status === 200){
+			alert(xhttp.responseText);
+			console.log(xhttp.responseText);
+		};
+	};
 	xhttp.send();
-	alert(xhttp.responseText);
+}
+
+
+function ScanWifi() {
+	var xhttp = new XMLHttpRequest();
+	xhttp.open("GET", "scannedWifi", true);
+	xhttp.onreadystatechange = function () {
+		if(xhttp.readyState === XMLHttpRequest.DONEDONE && xhttp.status === 200){
+			var divScannedWifi = document.getElementById("scannedWifi");
+			divScannedWifi.innerHTML = xhttp.responseText;
+		};
+	};
+	xhttp.send();
+	
+	
 }
