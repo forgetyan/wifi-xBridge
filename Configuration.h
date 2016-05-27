@@ -9,9 +9,10 @@
 
 class Configuration {
   public:
-    void setMyTransmitterId(uint32_t transmitterId);
+    void Testing();
+    void setTransmitterId(uint32_t transmitterId);
     uint32_t getTransmitterId();
-//  private:
+  private:
     
 };
 

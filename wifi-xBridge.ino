@@ -164,6 +164,7 @@ DexcomHelper _dexcomHelper;
 void setup() {
   // Open serial communications
   Serial.begin(9600);
+  EEPROM.begin(4096); // Use maximum allowed size
   delay(4000);
   /*while (!Serial) {
     ; // wait for serial port to connect. Needed for native USB port only

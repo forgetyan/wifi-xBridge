@@ -35,10 +35,10 @@
 			03:17:52
 			<h2>Dexcom ID</h2>
 			<p>
-			<input type="text" class="textbox" value="56KWD">
+			<input type="text" id="txtTransmitterId" class="textbox" value="56KWD">
 			</p>
 			<p>
-			<a href="javascript:alert('save');" class="button">Save</a><br/><br/>
+			<a href="javascript:SaveTransmitterId();" class="button">Save</a><br/><br/>
 			</p>
 			<h2>Google App Engine Address</h2>
 			<p>
@@ -70,53 +70,19 @@
 			</table>
 			
 			<br/><h2>Configure new Wifi</h2>
-				<a class="button" href="javascript:ScanWifi()">
-					<div style="width:20px; height:20px;display: inline-block; z-index: -1;">
-						<div class="wifi-symbol">
-						  <div class="wifi-circle first"></div>
-						  <div class="wifi-circle second"></div>
-						  <div class="wifi-circle third"></div>
-						  <div class="wifi-circle fourth"></div>
-						</div>
+			<a class="button" href="javascript:ScanWifi()">
+				<div style="width:20px; height:20px;display: inline-block; z-index: -1;">
+					<div class="wifi-symbol">
+					  <div class="wifi-circle first"></div>
+					  <div class="wifi-circle second"></div>
+					  <div class="wifi-circle third"></div>
+					  <div class="wifi-circle fourth"></div>
 					</div>
-					Scan for Wifi
-				</a><br/><br/>
-				<div id="scannedWifi">
 				</div>
-			<!--table>
-				<tr>
-					<th align="left">SSID</th>
-					<th></th>
-					<th></th>
-				</tr>
-				<tr>
-					<td>Drake (S)</td>
-					<td>
-						<div class="signal-bars mt1 sizing-box good four-bars">
-							<div class="first-bar bar"></div>
-							<div class="second-bar bar"></div>
-							<div class="third-bar bar"></div>
-							<div class="fourth-bar bar"></div>
-							<div class="fifth-bar bar"></div>
-						</div>
-					</td>
-					<td align="right"><a href="javascript:OpenSSIDPopup('Drake');" class="button">Add</a></td>
-				</tr>
-				<tr>
-					<td>Monique</td>
-					<td>
-						<div class="signal-bars mt1 sizing-box bad one-bar">
-							<div class="first-bar bar"></div>
-							<div class="second-bar bar"></div>
-							<div class="third-bar bar"></div>
-							<div class="fourth-bar bar"></div>
-							<div class="fifth-bar bar"></div>
-						</div>
-					</td>
-					<td align="right"><a href="javascript:OpenSSIDPopup('Monique');" class="button">Add</a></td>
-				</tr>
-			</table-->
-			
+				Scan for Wifi
+			</a><br/><br/>
+			<div id="scannedWifi">
+			</div>
 		</div>
 	</body>
 </html>

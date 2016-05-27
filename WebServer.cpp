@@ -53,7 +53,7 @@ void WebServer::start(){
   IPAddress myIP = WiFi.softAPIP();
   WebServer::_webServer.on("/", std::bind(&WebServer::handleRoot, this));
   WebServer::_webServer.on("/Test", std::bind(&WebServer::handleTest, this));
-  WebServer::_webServer.on("/SaveTransmitterId", std::bind(&WebServer::handleSaveTransmitterId, this));
+  WebServer::_webServer.on("/savetransmitterid", std::bind(&WebServer::handleSaveTransmitterId, this));
   WebServer::_webServer.on("/scanwifi", std::bind(&WebServer::handleScanWifi, this));
   WebServer::_webServer.on("/style.css", std::bind(&WebServer::handleStylesheet, this));
   WebServer::_webServer.on("/script.js", std::bind(&WebServer::handleJavascript, this));
@@ -78,6 +78,8 @@ void WebServer::loop() {
  */
 String WebServer::getDexcomId() {
   uint32_t transmitterId = WebServer::_configuration.getTransmitterId();
+  char textNbChar [5];
+  _dexcomHelper.IntToCharArray(transmitterId, textNbChar);
   return WebServer::_dexcomHelper.DexcomSrcToAscii(transmitterId);
 }
 
@@ -98,16 +100,17 @@ void WebServer::redirect(String url) {
  * This page will save the provided Transmitter ID to EEPROM
  */
 void WebServer::handleSaveTransmitterId() {
+  uint32_t transmitterIdSource;
   if (WebServer::_webServer.hasArg("TransmitterId")) {
     String transmitterId = WebServer::_webServer.arg("TransmitterId");
     char transmitterCharList[6];
     transmitterId.toCharArray(transmitterCharList, 6);
-    uint32_t transmitterIdSource = WebServer::_dexcomHelper.DexcomAsciiToSrc((char*)transmitterCharList);
-    _configuration.setMyTransmitterId(transmitterIdSource);
-    //Configuration::setMyTransmitterId(transmitterIdSource);
-    //WebServer::_configuration.setMyTransmitterId(transmitterIdSource);
+    transmitterIdSource = WebServer::_dexcomHelper.DexcomAsciiToSrc((char*)transmitterCharList);
+    WebServer::_configuration.setTransmitterId(transmitterIdSource);
   }
-  WebServer::redirect("/?TransmitterSaved=1");
+  //char textNbChar [5];
+  //_dexcomHelper.IntToCharArray(transmitterIdSource, textNbChar);
+  WebServer::redirect("/?TransmitterSaved=1");// + String(textNbChar));
 }
 
 /*
@@ -235,10 +238,10 @@ void WebServer::handleRoot() {
       " + uptime + "\n\
       <h2>Dexcom ID</h2>\n\
       <p>\n\
-      <input type=\"text\" class=\"textbox\" value=\"" + WebServer::getDexcomId() + "\">\n\
+      <input type=\"text\" id=\"txtTransmitterId\" class=\"textbox\" value=\"" + WebServer::getDexcomId() + "\">\n\
       </p>\n\
       <p>\n\
-      <a href=\"javascript:alert('save');\" class=\"button\">Save</a><br/><br/>\n\
+      <a href=\"javascript:SaveTransmitterId();\" class=\"button\">Save</a><br/><br/>\n\
       </p>\n\
       <h2>Google App Engine Address</h2>\n\
       <p>\n\
@@ -354,6 +357,10 @@ void WebServer::handleJavascript() {
   popup.style.opacity = 1;\n\
 }\n\
 \n\
+function SaveTransmitterId() {\n\
+  document.location.href='/savetransmitterid?TransmitterId=' + document.getElementById(\"txtTransmitterId\").value;\n\
+}\n\
+\n\
 function SaveSSID() {\n\
   var ssid_name = document.getElementById(\"ssid_name\");\n\
   var ssid_password = document.getElementById(\"ssid_password\");\n\
@@ -378,7 +385,7 @@ function TestSSID(ssid) {\n\
   var xhttp = new XMLHttpRequest();\n\
   xhttp.open(\"GET\", \"test/\" + ssid, true);\n\
   xhttp.onreadystatechange = function () {\n\
-    if(xhttp.readyState === XMLHttpRequest.DONE && xhttp.status === 200){\n\
+    if(xhttp.readyState === XMLHttpRequest.DONEDONE && xhttp.status === 200){\n\
       alert(xhttp.responseText);\n\
       console.log(xhttp.responseText);\n\
     };\n\
@@ -389,9 +396,9 @@ function TestSSID(ssid) {\n\
 \n\
 function ScanWifi() {\n\
   var xhttp = new XMLHttpRequest();\n\
-  xhttp.open(\"GET\", \"scanwifi\", true);\n\
+  xhttp.open(\"GET\", \"scannedWifi\", true);\n\
   xhttp.onreadystatechange = function () {\n\
-    if(xhttp.readyState === XMLHttpRequest.DONE && xhttp.status === 200){\n\
+    if(xhttp.readyState === XMLHttpRequest.DONEDONE && xhttp.status === 200){\n\
       var divScannedWifi = document.getElementById(\"scannedWifi\");\n\
       divScannedWifi.innerHTML = xhttp.responseText;\n\
     };\n\
@@ -399,8 +406,7 @@ function ScanWifi() {\n\
   xhttp.send();\n\
   \n\
   \n\
-}\n\
-";
+}";
   WebServer::_webServer.send(200, "text/javascript", response);
 }
 

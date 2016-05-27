@@ -24,23 +24,31 @@
 /*
  * This method will save the transmitter Id to the EEPROM
  */
-void setMyTransmitterId(uint32_t transmitterId) {
-  EEPROM.begin(4096); // Use maximum allowed size
-  EEPROM_writeAnything(0, transmitterId);
-  EEPROM.end();
+void Configuration::setTransmitterId(uint32_t transmitterId) {
+  EEPROM_writeAnything(1, transmitterId);
+  /*byte value = 65;
+  EEPROM.write(1, value);
+  EEPROM.commit();*/
 }
 
 /*
  * This method will get the transmitter Id from the EEPROM
  */
 uint32_t Configuration::getTransmitterId() {
-  EEPROM.begin(4096); // Use maximum allowed size
   uint32_t transmitterId;
-  EEPROM_readAnything(0, transmitterId);
-  EEPROM.end();
-  /*int addr = EEPROM.get(addr, myNewFloat);
-  int addr2 = EEPROM.get(addr, myNewFloat);
-  int addr3 = EEPROM.get(addr, myNewFloat);
-  int addr4 = EEPROM.get(addr, myNewFloat);*/
+  //byte value = EEPROM.read(1);
+  //transmitterId = value;
+  EEPROM_readAnything(1, transmitterId);
+  return transmitterId;
 }
 
+/*
+ * This method will get the Google App Engine Address from the EEPROM
+ */
+ /*
+String Configuration::getAppEngineAddress() {
+  String appEngineAddress;
+  byte value = EEPROM.read(1);
+  
+  return transmitterId;
+}*/
