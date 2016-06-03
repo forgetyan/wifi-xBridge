@@ -35,11 +35,11 @@ Configuration::Configuration()
  * This method will save the transmitter Id to the EEPROM
  */
 void Configuration::setTransmitterId(uint32_t transmitterId) {
-  BridgeConfig bridgeConfig = getBridgeConfig();
+  BridgeConfig* bridgeConfig = getBridgeConfig();
   Serial.print("setTransmitterId: ");
   Serial.print(transmitterId);
-  bridgeConfig.transmitterId = transmitterId;
-  Serial.print(bridgeConfig.transmitterId);
+  Serial.print("\r\n");
+  bridgeConfig->transmitterId = transmitterId;
   //EEPROM_writeAnything(1, transmitterId);
 }
 
@@ -47,10 +47,11 @@ void Configuration::setTransmitterId(uint32_t transmitterId) {
  * This method will get the transmitter Id from the EEPROM
  */
 uint32_t Configuration::getTransmitterId() {
-  BridgeConfig bridgeConfig = getBridgeConfig();
+  BridgeConfig* bridgeConfig = getBridgeConfig();
   Serial.print("getTransmitterId: ");
-  Serial.print(bridgeConfig.transmitterId);
-  return bridgeConfig.transmitterId;
+  Serial.print(bridgeConfig->transmitterId);
+  Serial.print("\r\n");
+  return bridgeConfig->transmitterId;
   /*
   uint32_t transmitterId;
   //byte value = EEPROM.read(1);
@@ -60,21 +61,29 @@ uint32_t Configuration::getTransmitterId() {
 }
 
 /*
- * This method will get the Google App Engine Address from the EEPROM
- *//*
+ * This method will get the Google App Engine Address
+ */
 String Configuration::getAppEngineAddress() {
-  String appEngineAddress;
-  byte value = EEPROM.read(1);
+  BridgeConfig* bridgeConfig = getBridgeConfig();
   
-  return transmitterId;
-}*/
+  return bridgeConfig->appEngineAddress;
+}
+
+/*
+ * This method will set the Google App Engine Address
+ */
+void Configuration::setAppEngineAddress(String value) {
+  BridgeConfig* bridgeConfig = getBridgeConfig();
+  
+  bridgeConfig->appEngineAddress = value;
+}
 
 /*
  * Configuration::getBridgeConfig
  * ------------------------------
  * This method will get the bridge configuration and load it if neccesary
  */
-BridgeConfig Configuration::getBridgeConfig() {
+BridgeConfig* Configuration::getBridgeConfig() {
   if(!_loaded){
     _bridgeConfig = LoadConfig();
   }
@@ -87,9 +96,9 @@ BridgeConfig Configuration::getBridgeConfig() {
  * This method will load the configuration object from EEPROM
  * returns: The bridge configuration struct
  */
-BridgeConfig Configuration::LoadConfig() {
+BridgeConfig* Configuration::LoadConfig() {
   Serial.print("Load configuration");
-  BridgeConfig config;
+  BridgeConfig* config = (BridgeConfig*)malloc(sizeof(BridgeConfig));// BridgeConfig();
   String eepromData;
   bool continueReading = true;
   bool separatorFound = false;
@@ -112,15 +121,20 @@ BridgeConfig Configuration::LoadConfig() {
         {
           separatorFound = true;
         }
-        eepromData = eepromData + newChar;
+        eepromData = eepromData + char(newChar);
         if (i == 3) // Read transmitter Id
         {
-          byte* p = (byte*)(void*)&config.transmitterId;
+          byte* p = (byte*)(void*)&(config->transmitterId);
           unsigned int i;
           for (i = 0; i < 3; i++) {
             *p++ = (byte)eepromData.charAt(i);
+            Serial.print("Char 2: ");
+            Serial.print((byte)eepromData.charAt(i));
           }
           eepromData = ""; // Reset data
+          Serial.print("Loaded config = ");
+          Serial.print(config->transmitterId);
+          Serial.print("\r\n");
         }
         if (separatorFound)
         {
@@ -128,7 +142,7 @@ BridgeConfig Configuration::LoadConfig() {
           if (!appEngineRead)
           {
             appEngineRead = true;
-            config.appEngineAddress = eepromData;
+            config->appEngineAddress = eepromData;
           }
           else
           {
@@ -142,7 +156,7 @@ BridgeConfig Configuration::LoadConfig() {
               WifiData newWifi = WifiData();
               newWifi.ssid = nextSSID;
               newWifi.password = nextPassword;
-              config.wifiList->add(newWifi);
+              config->wifiList->add(newWifi);
             }
             readingSSID = !readingSSID;
           }

@@ -24,12 +24,14 @@ class Configuration {
     void Testing();
     void setTransmitterId(uint32_t transmitterId);
     uint32_t getTransmitterId();
+    void setAppEngineAddress(String value);
+    String getAppEngineAddress();
   private:
-    BridgeConfig LoadConfig();
+    BridgeConfig* LoadConfig();
     void SaveConfig();
-    BridgeConfig getBridgeConfig();
+    BridgeConfig* getBridgeConfig();
     bool _loaded;
-    BridgeConfig _bridgeConfig;
+    BridgeConfig *_bridgeConfig;
     static DexcomHelper _dexcomHelper;
 };
 
