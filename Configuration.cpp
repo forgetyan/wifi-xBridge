@@ -1,5 +1,5 @@
 /*
- * WebServer.c - Library for managing configuration reading and saving in the EEPROM memory
+ * Configuration.c - Library for managing configuration reading and saving in the EEPROM memory
  */
 
 
@@ -21,34 +21,152 @@
  
 #include "Configuration.h"
 
+const static char CONFIGURATION_SEPARATOR = '¬';
+DexcomHelper Configuration::_dexcomHelper;
+
+/*
+ * Constructor
+ */
+Configuration::Configuration()
+{
+  _loaded = false;
+}
 /*
  * This method will save the transmitter Id to the EEPROM
  */
 void Configuration::setTransmitterId(uint32_t transmitterId) {
-  EEPROM_writeAnything(1, transmitterId);
-  /*byte value = 65;
-  EEPROM.write(1, value);
-  EEPROM.commit();*/
+  BridgeConfig bridgeConfig = getBridgeConfig();
+  Serial.print("setTransmitterId: ");
+  Serial.print(transmitterId);
+  bridgeConfig.transmitterId = transmitterId;
+  Serial.print(bridgeConfig.transmitterId);
+  //EEPROM_writeAnything(1, transmitterId);
 }
 
 /*
  * This method will get the transmitter Id from the EEPROM
  */
 uint32_t Configuration::getTransmitterId() {
+  BridgeConfig bridgeConfig = getBridgeConfig();
+  Serial.print("getTransmitterId: ");
+  Serial.print(bridgeConfig.transmitterId);
+  return bridgeConfig.transmitterId;
+  /*
   uint32_t transmitterId;
   //byte value = EEPROM.read(1);
   //transmitterId = value;
   EEPROM_readAnything(1, transmitterId);
-  return transmitterId;
+  return transmitterId;*/
 }
 
 /*
  * This method will get the Google App Engine Address from the EEPROM
- */
- /*
+ *//*
 String Configuration::getAppEngineAddress() {
   String appEngineAddress;
   byte value = EEPROM.read(1);
   
   return transmitterId;
 }*/
+
+/*
+ * Configuration::getBridgeConfig
+ * ------------------------------
+ * This method will get the bridge configuration and load it if neccesary
+ */
+BridgeConfig Configuration::getBridgeConfig() {
+  if(!_loaded){
+    _bridgeConfig = LoadConfig();
+  }
+  return _bridgeConfig;
+}
+
+/*
+ * Configuration::LoadConfig
+ * -------------------------
+ * This method will load the configuration object from EEPROM
+ * returns: The bridge configuration struct
+ */
+BridgeConfig Configuration::LoadConfig() {
+  Serial.print("Load configuration");
+  BridgeConfig config;
+  String eepromData;
+  bool continueReading = true;
+  bool separatorFound = false;
+  bool readingSSID = true;
+  bool appEngineRead = false;
+  char firstChar = EEPROM.read(0);
+  String nextSSID = "";
+  String nextPassword = "";
+  //if (firstChar == '¶') {
+    Serial.print("Configuration Valid");
+    // Configuration is valid
+    int i = 1;
+    while(continueReading) {
+      byte newChar = EEPROM.read(i);
+      Serial.print("Char: ");
+      Serial.print(newChar);
+      if (!(newChar == 0x00 || newChar == 255 || i == 4095)) // End of configuration
+      {
+        if (i > 3 && newChar == CONFIGURATION_SEPARATOR)
+        {
+          separatorFound = true;
+        }
+        eepromData = eepromData + newChar;
+        if (i == 3) // Read transmitter Id
+        {
+          byte* p = (byte*)(void*)&config.transmitterId;
+          unsigned int i;
+          for (i = 0; i < 3; i++) {
+            *p++ = (byte)eepromData.charAt(i);
+          }
+          eepromData = ""; // Reset data
+        }
+        if (separatorFound)
+        {
+          Serial.print("Separator found");
+          if (!appEngineRead)
+          {
+            appEngineRead = true;
+            config.appEngineAddress = eepromData;
+          }
+          else
+          {
+            if (readingSSID)
+            {
+              nextSSID = eepromData;
+            }
+            else
+            {
+              nextPassword = eepromData;
+              WifiData newWifi = WifiData();
+              newWifi.ssid = nextSSID;
+              newWifi.password = nextPassword;
+              config.wifiList->add(newWifi);
+            }
+            readingSSID = !readingSSID;
+          }
+          eepromData = ""; // Reset data to read
+        }
+      }
+      else {
+        continueReading = false;
+      }
+      
+      i++;
+    }
+  /*}
+  else
+  {
+    // Configuration is invalid
+    
+  }*/
+  _loaded = true;
+  return config;
+}
+
+void Configuration::SaveConfig() {
+  if(!_loaded) {
+    _bridgeConfig = LoadConfig();
+  }
+}
