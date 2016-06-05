@@ -119,7 +119,7 @@ BridgeConfig* Configuration::getBridgeConfig() {
  * returns: The bridge configuration struct
  */
 BridgeConfig* Configuration::LoadConfig() {
-  Serial.print("Load configuration");
+  Serial.print("Load configuration\r\n");
   BridgeConfig* config = (BridgeConfig*)malloc(sizeof(BridgeConfig));// BridgeConfig();
   String eepromData;
   bool continueReading = true;
@@ -132,11 +132,14 @@ BridgeConfig* Configuration::LoadConfig() {
   String nextSSID = "";
   String nextPassword = "";
   //if (firstChar == '¶') {
-    Serial.print("Configuration Valid");
+    Serial.print("Configuration Valid\r\n");
     // Configuration is valid
     // Read transmitter ID
     EEPROM_readAnything(1, config->transmitterId);
     int i = 4;
+    config->appEngineAddress = "";
+    config->hotSpotName = "";
+    config->hotSpotPassword = "";
     while(continueReading) {
       byte newChar = EEPROM.read(i);
       Serial.print("Char: ");
@@ -150,7 +153,7 @@ BridgeConfig* Configuration::LoadConfig() {
         eepromData = eepromData + char(newChar);
         if (separatorFound)
         {
-          Serial.print("Separator found");
+          Serial.print("Separator found\r\n");
           if (!appEngineRead)
           {
             appEngineRead = true;
@@ -168,7 +171,7 @@ BridgeConfig* Configuration::LoadConfig() {
           }
           else // Everything else is saved wifi SSID and Passwords
           {
-            if (readingSSID)
+            /*if (readingSSID)
             {
               nextSSID = eepromData;
             }
@@ -180,7 +183,7 @@ BridgeConfig* Configuration::LoadConfig() {
               newWifi.password = nextPassword;
               config->wifiList->add(newWifi);
             }
-            readingSSID = !readingSSID;
+            readingSSID = !readingSSID;*/
           }
           eepromData = ""; // Reset data to read
         }
@@ -211,19 +214,19 @@ void Configuration::SaveConfig() {
   if(!_loaded) {
     _bridgeConfig = LoadConfig();
   }
-  Serial.print("Save configuration");
+  Serial.print("Save configuration\r\n");
   WriteEEPROM(0, '¶');
   Serial.print("After first write");
   uint32_t transmitterId = Configuration::getTransmitterId();
   EEPROM_writeAnything(1, transmitterId);
-  Serial.print("Transmitter written");
+  Serial.print("Transmitter written\r\n");
   position = 4;
 
   Serial.print("Transmitter App engine address position: ");
   Serial.print(position);
   Serial.print("\r\n");
   // Write App engine address
-  EEPROM_writeAnything(position, _bridgeConfig->appEngineAddress);
+  Configuration::WriteStringToEEPROM(position, _bridgeConfig->appEngineAddress);
   position = position + _bridgeConfig->appEngineAddress.length();
   Configuration::WriteEEPROM(position , CONFIGURATION_SEPARATOR);
   position++;
@@ -231,7 +234,7 @@ void Configuration::SaveConfig() {
   Serial.print(position);
   Serial.print("\r\n");
   // now write hotspot wifi name
-  EEPROM_writeAnything(position, _bridgeConfig->hotSpotName);
+  Configuration::WriteStringToEEPROM(position, _bridgeConfig->hotSpotName);
   position = position + _bridgeConfig->hotSpotName.length();
   Configuration::WriteEEPROM(position , CONFIGURATION_SEPARATOR);
   position++;
@@ -239,7 +242,7 @@ void Configuration::SaveConfig() {
   Serial.print(position);
   Serial.print("\r\n");
   // now write hotspot wifi password
-  EEPROM_writeAnything(position, _bridgeConfig->hotSpotPassword);
+  Configuration::WriteStringToEEPROM(position, _bridgeConfig->hotSpotPassword);
   position = position + _bridgeConfig->hotSpotPassword.length();
   Configuration::WriteEEPROM(position , CONFIGURATION_SEPARATOR);
   position++;
@@ -261,10 +264,26 @@ void Configuration::SaveConfig() {
   Configuration::WriteEEPROM(position , 0x00); // NUL character at the end
   EEPROM.commit();
   Serial.print("Committed");
+  _loaded = false;
+  free(_bridgeConfig);
 }
 
 /*
- * 
+ * Configuration::WriteStringToEEPROM
+ * ----------------------------------
+ * This method will save a string to the specified EEPROM position
+ */
+void Configuration::WriteStringToEEPROM(int position, String data)
+{
+  for(int i = 0; i < data.length(); i++){
+    Configuration::WriteEEPROM(position + i, data.charAt(i));
+  }
+}
+
+/*
+ * Configuration::WriteEEPROM
+ * --------------------------
+ * This method will save a character to EEPROM if the current caracter is different at this position
  */
 void Configuration::WriteEEPROM(int position, char data)
 {

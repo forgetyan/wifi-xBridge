@@ -32,6 +32,7 @@ class Configuration {
   private:
     BridgeConfig* LoadConfig();
     void WriteEEPROM(int position, char data);
+    void WriteStringToEEPROM(int position, String data);
     BridgeConfig* getBridgeConfig();
     bool _loaded;
     BridgeConfig *_bridgeConfig;
