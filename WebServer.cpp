@@ -54,6 +54,7 @@ void WebServer::start(){
   WebServer::_webServer.on("/", std::bind(&WebServer::handleRoot, this));
   WebServer::_webServer.on("/Test", std::bind(&WebServer::handleTest, this));
   WebServer::_webServer.on("/savetransmitterid", std::bind(&WebServer::handleSaveTransmitterId, this));
+  WebServer::_webServer.on("/saveappengineaddress", std::bind(&WebServer::handleSaveAppEngineAddress, this));
   WebServer::_webServer.on("/scanwifi", std::bind(&WebServer::handleScanWifi, this));
   WebServer::_webServer.on("/style.css", std::bind(&WebServer::handleStylesheet, this));
   WebServer::_webServer.on("/script.js", std::bind(&WebServer::handleJavascript, this));
@@ -107,12 +108,26 @@ void WebServer::handleSaveTransmitterId() {
     transmitterId.toCharArray(transmitterCharList, 6);
     transmitterIdSource = WebServer::_dexcomHelper.DexcomAsciiToSrc((char*)transmitterCharList);
     WebServer::_configuration.setTransmitterId(transmitterIdSource);
+    WebServer::_configuration.SaveConfig();
   }
   //char textNbChar [5];
   //_dexcomHelper.IntToCharArray(transmitterIdSource, textNbChar);
   WebServer::redirect("/?TransmitterSaved=1");// + String(textNbChar));
 }
 
+/*
+ * WebServer::handleSaveAppEngineAddress
+ * -------------------------------------
+ * This page will save the app engine address specified
+ */
+void WebServer::handleSaveAppEngineAddress() {
+  if (WebServer::_webServer.hasArg("Address")) {
+    String address = WebServer::_webServer.arg("Address");
+    WebServer::_configuration.setAppEngineAddress(address);
+    WebServer::_configuration.SaveConfig();
+  }
+  WebServer::redirect("/?AppEngineSaved=1");
+}
 /*
  * WebServer::handleNotFound
  * -------------------------
@@ -245,10 +260,10 @@ void WebServer::handleRoot() {
       </p>\n\
       <h2>Google App Engine Address</h2>\n\
       <p>\n\
-      <input type=\"text\" class=\"textbox\" value=\"jay-t1d.appspot.com\">\n\
+      <input type=\"text\" id=\"txtAppEngineAddress\" class=\"textbox\" value=\"" + WebServer::_configuration.getAppEngineAddress() + "\">\n\
       </p>\n\
       <p>\n\
-      <a href=\"javascript:alert('save');\" class=\"button\">Save</a><br/><br/>\n\
+      <a href=\"javascript:SaveAppEngineAddress();\" class=\"button\">Save</a><br/><br/>\n\
       </p>\n\
       <h2>Configured Wifi</h2>\n\
       <table>\n\
@@ -359,6 +374,10 @@ void WebServer::handleJavascript() {
 \n\
 function SaveTransmitterId() {\n\
   document.location.href='/savetransmitterid?TransmitterId=' + document.getElementById(\"txtTransmitterId\").value;\n\
+}\n\
+\n\
+function SaveAppEngineAddress() {\n\
+  document.location.href='/saveappengineaddress?Address=' + document.getElementById(\"txtAppEngineAddress\").value;\n\
 }\n\
 \n\
 function SaveSSID() {\n\

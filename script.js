@@ -15,6 +15,10 @@ function SaveTransmitterId() {
 	document.location.href='/savetransmitterid?TransmitterId=' + document.getElementById("TransmitterId").value;
 }
 
+function SaveAppEngineAddress() {
+	document.location.href='/saveappengineaddress?Address=' + document.getElementById("txtAppEngineAddress").value;
+}
+
 function SaveSSID() {
 	var ssid_name = document.getElementById("ssid_name");
 	var ssid_password = document.getElementById("ssid_password");

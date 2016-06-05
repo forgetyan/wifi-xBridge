@@ -23,6 +23,7 @@ class WebServer {
     void handleScanWifi();
     void handleTest();
     void handleSaveTransmitterId();
+    void handleSaveAppEngineAddress();
     void redirect(String url);
     // const char* ACCESS_POINT_SSID;
     // const char* ACCESS_POINT_PWD;

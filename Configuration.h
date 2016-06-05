@@ -8,13 +8,15 @@
 #include "DexcomHelper.h"
 
 struct WifiData {
-  String ssid;
-  String password;
+  String ssid = "wifi-xBridge";
+  String password = "";
 };
 
 struct BridgeConfig {
-  uint32_t transmitterId;
-  String appEngineAddress;
+  uint32_t transmitterId = 0;
+  String appEngineAddress = "";
+  String hotSpotName = "";
+  String hotSpotPassword = "";
   LinkedList<WifiData> *wifiList = new LinkedList<WifiData>();
 };
 
@@ -23,12 +25,13 @@ class Configuration {
     Configuration();
     void Testing();
     void setTransmitterId(uint32_t transmitterId);
+    void setAppEngineAddress(String address);
     uint32_t getTransmitterId();
-    void setAppEngineAddress(String value);
     String getAppEngineAddress();
+    void SaveConfig();
   private:
     BridgeConfig* LoadConfig();
-    void SaveConfig();
+    void WriteEEPROM(int position, char data);
     BridgeConfig* getBridgeConfig();
     bool _loaded;
     BridgeConfig *_bridgeConfig;
