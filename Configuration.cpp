@@ -65,14 +65,7 @@ uint32_t Configuration::getTransmitterId() {
   //byte value = EEPROM.read(1);
   //transmitterId = value;
   EEPROM_readAnything(1, transmitterId);
-  Serial.print("getTransmitterId: ");
-  Serial.print(transmitterId);
-  Serial.print("\r\n");
-  
   BridgeConfig* bridgeConfig = getBridgeConfig();
-  Serial.print("getTransmitterId: ");
-  Serial.print(bridgeConfig->transmitterId);
-  Serial.print("\r\n");
   return bridgeConfig->transmitterId;
   /*
   uint32_t transmitterId;
@@ -120,7 +113,7 @@ BridgeConfig* Configuration::getBridgeConfig() {
  */
 BridgeConfig* Configuration::LoadConfig() {
   Serial.print("Load configuration\r\n");
-  BridgeConfig* config = (BridgeConfig*)malloc(sizeof(BridgeConfig));// BridgeConfig();
+  BridgeConfig* config = (BridgeConfig*)calloc(1, sizeof(BridgeConfig));// BridgeConfig();
   String eepromData;
   bool continueReading = true;
   bool separatorFound = false;
@@ -131,11 +124,12 @@ BridgeConfig* Configuration::LoadConfig() {
   char firstChar = EEPROM.read(0);
   String nextSSID = "";
   String nextPassword = "";
-  //if (firstChar == '¶') {
+  if (firstChar == 182) { //'¶'
     Serial.print("Configuration Valid\r\n");
     // Configuration is valid
     // Read transmitter ID
     EEPROM_readAnything(1, config->transmitterId);
+    Serial.print("Transmitter ID:");
     int i = 4;
     config->appEngineAddress = "";
     config->hotSpotName = "";
@@ -150,14 +144,19 @@ BridgeConfig* Configuration::LoadConfig() {
         {
           separatorFound = true;
         }
-        eepromData = eepromData + char(newChar);
         if (separatorFound)
         {
           Serial.print("Separator found\r\n");
           if (!appEngineRead)
           {
             appEngineRead = true;
+            Serial.print("App engine address:");
+            Serial.print(eepromData);
+            Serial.print("\r\n");
             config->appEngineAddress = eepromData;
+            Serial.print("App engine variable: \r\n");
+            Serial.print(config->appEngineAddress);
+            Serial.print("\r\n");
           }
           else if (!hotspotNameRead)
           {
@@ -187,6 +186,10 @@ BridgeConfig* Configuration::LoadConfig() {
           }
           eepromData = ""; // Reset data to read
         }
+        else
+        {
+          eepromData = eepromData + char(newChar);
+        }
       }
       else {
         continueReading = false;
@@ -194,12 +197,16 @@ BridgeConfig* Configuration::LoadConfig() {
       
       i++;
     }
-  /*}
+  }
   else
   {
+    Serial.write("firstChar was: ");
+    Serial.write(firstChar);
     // Configuration is invalid
-    
-  }*/
+    config->appEngineAddress = "";
+    config->hotSpotName = "";
+    config->hotSpotPassword = "";
+  }
   _loaded = true;
   return config;
 }
@@ -216,7 +223,6 @@ void Configuration::SaveConfig() {
   }
   Serial.print("Save configuration\r\n");
   WriteEEPROM(0, '¶');
-  Serial.print("After first write");
   uint32_t transmitterId = Configuration::getTransmitterId();
   EEPROM_writeAnything(1, transmitterId);
   Serial.print("Transmitter written\r\n");
@@ -230,9 +236,11 @@ void Configuration::SaveConfig() {
   position = position + _bridgeConfig->appEngineAddress.length();
   Configuration::WriteEEPROM(position , CONFIGURATION_SEPARATOR);
   position++;
+  
   Serial.print("HotSpotWifi Name");
   Serial.print(position);
   Serial.print("\r\n");
+  
   // now write hotspot wifi name
   Configuration::WriteStringToEEPROM(position, _bridgeConfig->hotSpotName);
   position = position + _bridgeConfig->hotSpotName.length();
@@ -287,9 +295,9 @@ void Configuration::WriteStringToEEPROM(int position, String data)
  */
 void Configuration::WriteEEPROM(int position, char data)
 {
-  if(EEPROM.read(position) != data)
-  {
+  //if(EEPROM.read(position) != data)
+  //{
     EEPROM.write(position, data);
-  }
+  //}
 }
 
