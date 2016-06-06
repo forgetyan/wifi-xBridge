@@ -55,6 +55,7 @@ void WebServer::start(){
   WebServer::_webServer.on("/Test", std::bind(&WebServer::handleTest, this));
   WebServer::_webServer.on("/savetransmitterid", std::bind(&WebServer::handleSaveTransmitterId, this));
   WebServer::_webServer.on("/saveappengineaddress", std::bind(&WebServer::handleSaveAppEngineAddress, this));
+  WebServer::_webServer.on("/savessid", std::bind(&WebServer::handleSaveSSID, this));
   WebServer::_webServer.on("/scanwifi", std::bind(&WebServer::handleScanWifi, this));
   WebServer::_webServer.on("/style.css", std::bind(&WebServer::handleStylesheet, this));
   WebServer::_webServer.on("/script.js", std::bind(&WebServer::handleJavascript, this));
@@ -116,6 +117,21 @@ void WebServer::handleSaveTransmitterId() {
 }
 
 /*
+ * WebServer::handleSaveSSID
+ * -------------------------
+ * This page will save the SSID / password pair in EEPROM
+ */
+void WebServer::handleSaveSSID() {
+  if (WebServer::_webServer.hasArg("ssid_name")) {
+    String ssidName = WebServer::_webServer.arg("ssid_name");
+    String ssidPassword = WebServer::_webServer.arg("ssid_password");
+    WebServer::_configuration.saveSSID(ssidName, ssidPassword);
+    WebServer::_configuration.SaveConfig();
+  }
+  WebServer::redirect("/?AppEngineSaved=1");
+}
+
+/*
  * WebServer::handleSaveAppEngineAddress
  * -------------------------------------
  * This page will save the app engine address specified
@@ -163,13 +179,73 @@ void WebServer::handleTest() {
  * This web method will return result of a Wifi Scan
  */
 void WebServer::handleScanWifi() {
-  String response = "<table>\n\
+  String response;
+  int n = WiFi.scanNetworks();
+  if (n == 0)
+  {
+    response = "No network found...";
+  }
+  else
+  {
+    response = "<table>\n\
  <tr>\n\
     <th align=\"left\">SSID</th>\n\
     <th></th>\n\
     <th></th>\n\
-  </tr>\n\
-  <tr>\n\
+  </tr>\n";
+  for (int i = 0; i < n; ++i)
+  {
+    String textSecurity = "";
+    switch(WiFi.encryptionType(i))
+    {
+      case ENC_TYPE_WEP:
+      case ENC_TYPE_TKIP:
+      case ENC_TYPE_CCMP:
+      case ENC_TYPE_AUTO:
+        textSecurity = "*";
+        break;
+      case ENC_TYPE_NONE:
+        textSecurity = "";
+        break;
+    }
+    int rssi = WiFi.RSSI(i);
+    String barClass = "";
+    if(rssi > -60)
+    {
+      barClass = "good five-bars";
+    }
+    else if (rssi > -70)
+    {
+      barClass = "good four-bars";
+    }
+    else if (rssi > -80)
+    {
+      barClass = "ok three-bars";
+    }
+    else if (rssi > -90)
+    {
+      barClass = "bad two-bars";
+    }
+    else
+    {
+      barClass = "bad one-bar";
+    }
+    
+    response += "  <tr>\n\
+    <td>" + WiFi.SSID(i) + textSecurity + "</td>\n\
+    <td>\n\
+      <div class=\"signal-bars mt1 sizing-box " + barClass + "\">\n\
+        <div class=\"first-bar bar\"></div>\n\
+        <div class=\"second-bar bar\"></div>\n\
+        <div class=\"third-bar bar\"></div>\n\
+        <div class=\"fourth-bar bar\"></div>\n\
+        <div class=\"fifth-bar bar\"></div>\n\
+      </div>\n\
+    </td>\n\
+    <td align=\"right\"><a href=\"javascript:OpenSSIDPopup('Drake');\" class=\"button\">Add</a></td>\n\
+  </tr>\n";
+  }
+  /*<tr>\n\
     <td>Drake (S)</td>\n\
     <td>\n\
       <div class=\"signal-bars mt1 sizing-box good four-bars\">\n\
@@ -194,9 +270,9 @@ void WebServer::handleScanWifi() {
       </div>\n\
     </td>\n\
     <td align=\"right\"><a href=\"javascript:OpenSSIDPopup('Monique');\" class=\"button\">Add</a></td>\n\
-  </tr>\n\
-</table>";
-  
+  </tr>\n\*/
+    response += "</table>";
+  }
   WebServer::_webServer.send(200, "text/html", response);
 }
 
@@ -215,6 +291,35 @@ void WebServer::handleRoot() {
   uptime += WebServer::padding(min % 60, 2);
   uptime += ":";
   uptime += WebServer::padding(sec % 60, 2);
+
+  String configuredWifiText;
+  Serial.print("Get Wifi Count");
+  int wifiCount = WebServer::_configuration.getWifiCount();
+  /*if (wifiCount > 0) {
+    configuredWifiText = "<table>\n\
+        <tr>\n\
+          <th align=\"left\">SSID</th>\n\
+          <th></th>\n\
+        </tr>\n";
+    for(int i = 0; i < wifiCount; i++)
+    {
+      Serial.print("Get wifi");
+      Serial.print(i);
+      WifiData wifiData = WebServer::_configuration.getWifiData(i);
+      configuredWifiText = configuredWifiText + "<tr>\n\
+          <td>" + wifiData.ssid + " (Connected)</td>\n\
+          <td align=\"right\">\n\
+            <a href=\"javascript:TestSSID('Drake'); \" class=\"button\">Test</a>\n\
+            <a href=\"javascript:RemoveSSID('Drake');\" class=\"button\">Delete</a>\n\
+          </td>\n\
+        </tr>\n";
+    }
+    configuredWifiText = configuredWifiText + "</table>\n";
+    Serial.print("Done listing wifi");
+  }
+  else {
+    configuredWifiText = "No Wifi configured";
+  }*/
   
   String response = "<html>\n\
  <head>\n\
@@ -226,7 +331,7 @@ void WebServer::handleRoot() {
   <body>\n\
     <div id=\"popup\" class=\"overlay\">\n\
       <div class=\"popup\">\n\
-        <form method=\"post\" action=\"SaveSSID\" id=\"frmSaveSSID\">\n\
+        <form method=\"post\" action=\"savessid\" id=\"frmSaveSSID\">\n\
           <h2>Add a new SSID</h2>\n\
           <a class=\"close\" href=\"javascript:ClosePopup();\">&times;</a>\n\
           <div class=\"content\">\n\
@@ -404,7 +509,7 @@ function TestSSID(ssid) {\n\
   var xhttp = new XMLHttpRequest();\n\
   xhttp.open(\"GET\", \"test/\" + ssid, true);\n\
   xhttp.onreadystatechange = function () {\n\
-    if(xhttp.readyState === XMLHttpRequest.DONEDONE && xhttp.status === 200){\n\
+    if(xhttp.readyState === XMLHttpRequest.DONE && xhttp.status === 200){\n\
       alert(xhttp.responseText);\n\
       console.log(xhttp.responseText);\n\
     };\n\
@@ -415,9 +520,9 @@ function TestSSID(ssid) {\n\
 \n\
 function ScanWifi() {\n\
   var xhttp = new XMLHttpRequest();\n\
-  xhttp.open(\"GET\", \"scannedWifi\", true);\n\
+  xhttp.open(\"GET\", \"scanwifi\", true);\n\
   xhttp.onreadystatechange = function () {\n\
-    if(xhttp.readyState === XMLHttpRequest.DONEDONE && xhttp.status === 200){\n\
+    if(xhttp.readyState === XMLHttpRequest.DONE && xhttp.status === 200){\n\
       var divScannedWifi = document.getElementById(\"scannedWifi\");\n\
       divScannedWifi.innerHTML = xhttp.responseText;\n\
     };\n\

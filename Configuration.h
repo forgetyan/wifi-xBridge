@@ -26,9 +26,12 @@ class Configuration {
     void Testing();
     void setTransmitterId(uint32_t transmitterId);
     void setAppEngineAddress(String address);
+    void saveSSID(String ssidName, String ssidPassword);
     uint32_t getTransmitterId();
     String getAppEngineAddress();
     void SaveConfig();
+    int getWifiCount();
+    WifiData getWifiData(int position);
   private:
     BridgeConfig* LoadConfig();
     void WriteEEPROM(int position, char data);

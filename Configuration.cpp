@@ -57,6 +57,45 @@ void Configuration::setAppEngineAddress(String address) {
   Serial.print("\r\n");
   bridgeConfig->appEngineAddress = address;
 }
+
+/*
+ * Configuration::saveSSID
+ * -----------------------
+ * This method save a new SSID in EEPROM
+ */
+void Configuration::saveSSID(String ssidName, String ssidPassword) {
+  BridgeConfig* bridgeConfig = getBridgeConfig();
+  // Create wifi Data Object
+  WifiData* wifiData = (WifiData*)calloc(1, sizeof(WifiData));
+  // Add to saved wifi list
+  bridgeConfig->wifiList->add(*wifiData);
+}
+
+/*
+ * Configuration::getWifiData
+ * --------------------------
+ * This method will get the specified saved Wifi Data
+ */
+WifiData Configuration::getWifiData(int position) {
+  BridgeConfig* bridgeConfig = getBridgeConfig();
+  return bridgeConfig->wifiList->get(position);
+}
+
+/*
+ * Configuration::getWifiCount
+ * ---------------------------
+ * This method will return the number of saved Wifi
+ */
+int Configuration::getWifiCount() {
+  BridgeConfig* bridgeConfig = getBridgeConfig();
+  Serial.print("Got config");
+  LinkedList<WifiData>* wifiList = bridgeConfig->wifiList;
+  Serial.print("Got wifi List");
+  Serial.print("Size is ");
+  Serial.print(bridgeConfig->wifiList->size());
+  return bridgeConfig->wifiList->size();
+}
+
 /*
  * This method will get the transmitter Id from the EEPROM
  */

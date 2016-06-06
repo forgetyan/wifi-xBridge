@@ -43,7 +43,7 @@ function TestSSID(ssid) {
 	var xhttp = new XMLHttpRequest();
 	xhttp.open("GET", "test/" + ssid, true);
 	xhttp.onreadystatechange = function () {
-		if(xhttp.readyState === XMLHttpRequest.DONEDONE && xhttp.status === 200){
+		if(xhttp.readyState === XMLHttpRequest.DONE && xhttp.status === 200){
 			alert(xhttp.responseText);
 			console.log(xhttp.responseText);
 		};
@@ -56,7 +56,7 @@ function ScanWifi() {
 	var xhttp = new XMLHttpRequest();
 	xhttp.open("GET", "scannedWifi", true);
 	xhttp.onreadystatechange = function () {
-		if(xhttp.readyState === XMLHttpRequest.DONEDONE && xhttp.status === 200){
+		if(xhttp.readyState === XMLHttpRequest.DONE && xhttp.status === 200){
 			var divScannedWifi = document.getElementById("scannedWifi");
 			divScannedWifi.innerHTML = xhttp.responseText;
 		};
