@@ -322,15 +322,15 @@ void WebServer::handleRoot() {
       Serial.print("Get wifi");
       Serial.print(i);
       Serial.print("\r\n");
-      WifiData wifiData = WebServer::_configuration.getWifiData(i);
+      WifiData* wifiData = WebServer::_configuration.getWifiData(i);
       Serial.print("Wifi ssid: ");
-      Serial.print(wifiData.ssid);
+      Serial.print(wifiData->ssid);
       Serial.print("\r\n");
       configuredWifiText = configuredWifiText + "<tr>\n\
-          <td>" + wifiData.ssid + "</td>\n\
+          <td>" + wifiData->ssid + "</td>\n\
           <td align=\"right\">\n\
-            <a href=\"javascript:TestSSID('" + wifiData.ssid + "'); \" class=\"button\">Test</a>\n\
-            <a href=\"javascript:RemoveSSID('" + wifiData.ssid + "');\" class=\"button\">Delete</a>\n\
+            <a href=\"javascript:TestSSID('" + wifiData->ssid + "'); \" class=\"button\">Test</a>\n\
+            <a href=\"javascript:RemoveSSID('" + wifiData->ssid + "');\" class=\"button\">Delete</a>\n\
           </td>\n\
         </tr>\n";
     }

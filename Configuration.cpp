@@ -65,7 +65,7 @@ void Configuration::saveSSID(String ssidName, String ssidPassword) {
   wifiData->ssid = ssidName;
   wifiData->password = ssidPassword;
   // Add to saved wifi list
-  bridgeConfig->wifiList->add(*wifiData);
+  bridgeConfig->wifiList->add(wifiData);
   Serial.print("New wifi ssid: ");
   Serial.print(wifiData->ssid);
   Serial.print("\r\nSize is now:");
@@ -86,12 +86,13 @@ void Configuration::deleteSSID(String ssidName) {
     Serial.print("Check ssid no:");
     Serial.print(i);
     Serial.print("\r\n");
-    WifiData wifiData = Configuration::getWifiData(i);
-    if(wifiData.ssid == ssidName) {
+    WifiData* wifiData = Configuration::getWifiData(i);
+    if(wifiData->ssid == ssidName) {
       Serial.print("Needs to be removed\r\n");
       // remove from the list
       bridgeConfig->wifiList->remove(i);
       Serial.print("Removed from list\r\n");
+      free(wifiData);
     }
   }
 }
@@ -100,7 +101,7 @@ void Configuration::deleteSSID(String ssidName) {
  * --------------------------
  * This method will get the specified saved Wifi Data
  */
-WifiData Configuration::getWifiData(int position) {
+WifiData* Configuration::getWifiData(int position) {
   BridgeConfig* bridgeConfig = getBridgeConfig();
   return bridgeConfig->wifiList->get(position);
 }
@@ -112,7 +113,7 @@ WifiData Configuration::getWifiData(int position) {
  */
 int Configuration::getWifiCount() {
   BridgeConfig* bridgeConfig = getBridgeConfig();
-  LinkedList<WifiData>* wifiList = bridgeConfig->wifiList;
+  LinkedList<WifiData*>* wifiList = bridgeConfig->wifiList;
   return bridgeConfig->wifiList->size();
 }
 
@@ -178,7 +179,7 @@ BridgeConfig* Configuration::LoadConfig() {
   
   Serial.print("Load configuration\r\n");
   BridgeConfig* config = (BridgeConfig*)calloc(1, sizeof(BridgeConfig));// BridgeConfig();
-  config->wifiList = new LinkedList<WifiData>();
+  config->wifiList = new LinkedList<WifiData*>();
   Serial.print( config->wifiList->size());
   String eepromData;
   bool continueReading = true;
@@ -241,13 +242,13 @@ BridgeConfig* Configuration::LoadConfig() {
             else
             {
               nextPassword = eepromData;
-              WifiData newWifi = WifiData();
+              WifiData* newWifi = (WifiData*)calloc(1, sizeof(WifiData));
               Serial.print("New Wifi Loaded:\r\n");
-              newWifi.ssid = nextSSID;
-              Serial.print(newWifi.ssid);
+              newWifi->ssid = nextSSID;
+              Serial.print(newWifi->ssid);
               Serial.print("|");
-              newWifi.password = nextPassword;
-              Serial.print(newWifi.password);
+              newWifi->password = nextPassword;
+              Serial.print(newWifi->password);
               Serial.print("\r\n");
               config->wifiList->add(newWifi);
             }
@@ -335,19 +336,19 @@ void Configuration::SaveConfig() {
   Serial.print(" Wifi to save:\r\n");
   for(int i = 0; i < arrayLength; i ++)
   {
-    WifiData wifiData = bridgeConfig->wifiList->get(i);
-    if (wifiData.ssid.length() > 0) {
-      Serial.print(wifiData.ssid);
-      WriteStringToEEPROM(position, wifiData.ssid);
-      position = position + wifiData.ssid.length();
+    WifiData* wifiData = bridgeConfig->wifiList->get(i);
+    if (wifiData->ssid.length() > 0) {
+      Serial.print(wifiData->ssid);
+      WriteStringToEEPROM(position, wifiData->ssid);
+      position = position + wifiData->ssid.length();
     }
     Serial.print("|");
     Configuration::WriteEEPROM(position, CONFIGURATION_SEPARATOR);
     position++;
-    if (wifiData.password.length() > 0) {
-      Serial.print(wifiData.password);
-      WriteStringToEEPROM(position, wifiData.password);
-      position = position + wifiData.password.length();
+    if (wifiData->password.length() > 0) {
+      Serial.print(wifiData->password);
+      WriteStringToEEPROM(position, wifiData->password);
+      position = position + wifiData->password.length();
     }
     Configuration::WriteEEPROM(position, CONFIGURATION_SEPARATOR);
     position++;
@@ -367,7 +368,7 @@ void Configuration::SaveConfig() {
  */
 void Configuration::WriteStringToEEPROM(int position, String data)
 {
-  for(int i = 0; i < data.length() - 1; i++){
+  for(int i = 0; i < data.length(); i++){
     Configuration::WriteEEPROM(position + i, data.charAt(i));
   }
 }

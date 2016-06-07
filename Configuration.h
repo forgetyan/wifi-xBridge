@@ -17,7 +17,7 @@ struct BridgeConfig {
   String appEngineAddress = "";
   String hotSpotName = "";
   String hotSpotPassword = "";
-  LinkedList<WifiData> *wifiList = new LinkedList<WifiData>();
+  LinkedList<WifiData*> *wifiList = new LinkedList<WifiData*>();
 };
 
 class Configuration {
@@ -32,7 +32,7 @@ class Configuration {
     String getAppEngineAddress();
     void SaveConfig();
     int getWifiCount();
-    WifiData getWifiData(int position);
+    WifiData* getWifiData(int position);
   private:
     BridgeConfig* LoadConfig();
     void WriteEEPROM(int position, char data);
