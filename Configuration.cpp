@@ -356,9 +356,9 @@ void Configuration::SaveConfig() {
   Configuration::WriteEEPROM(position , 0x255); // 255 character at the end
   EEPROM.commit();
   Serial.print("Committed");
-  _loaded = false;
-  free(bridgeConfig->wifiList);
-  free(bridgeConfig);
+  //_loaded = false;
+  //free(bridgeConfig->wifiList);
+  //free(bridgeConfig);
 }
 
 /*
