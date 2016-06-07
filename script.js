@@ -35,7 +35,7 @@ function ClosePopup() {
 function RemoveSSID(ssid)
 {
 	if (confirm("Do you really want to remove " + ssid)) {
-		document.location.href='remove/' + ssid;
+		document.location.href='remove?ssid=' + ssid;
 	}
 }
 

@@ -24,6 +24,7 @@ class WebServer {
     void handleTest();
     void handleSaveTransmitterId();
     void handleSaveSSID();
+    void handleRemoveSSID();
     void handleSaveAppEngineAddress();
     void redirect(String url);
     // const char* ACCESS_POINT_SSID;

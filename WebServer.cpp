@@ -56,6 +56,7 @@ void WebServer::start(){
   WebServer::_webServer.on("/savetransmitterid", std::bind(&WebServer::handleSaveTransmitterId, this));
   WebServer::_webServer.on("/saveappengineaddress", std::bind(&WebServer::handleSaveAppEngineAddress, this));
   WebServer::_webServer.on("/savessid", std::bind(&WebServer::handleSaveSSID, this));
+  WebServer::_webServer.on("/remove", std::bind(&WebServer::handleRemoveSSID, this));
   WebServer::_webServer.on("/scanwifi", std::bind(&WebServer::handleScanWifi, this));
   WebServer::_webServer.on("/style.css", std::bind(&WebServer::handleStylesheet, this));
   WebServer::_webServer.on("/script.js", std::bind(&WebServer::handleJavascript, this));
@@ -128,8 +129,23 @@ void WebServer::handleSaveSSID() {
     WebServer::_configuration.saveSSID(ssidName, ssidPassword);
     WebServer::_configuration.SaveConfig();
   }
-  WebServer::redirect("/?AppEngineSaved=1");
+  WebServer::redirect("/?ssidSaved=1");
 }
+
+/*
+ * WebServer::handleRemoveSSID
+ * ---------------------------
+ * This method will remove the specified ssid
+ */
+void WebServer::handleRemoveSSID() {
+    if (WebServer::_webServer.hasArg("ssid")) {
+    String ssidName = WebServer::_webServer.arg("ssid");
+    WebServer::_configuration.deleteSSID(ssidName);
+    WebServer::_configuration.SaveConfig();
+  }
+  WebServer::redirect("/?ssidDeleted=1");
+}
+
 
 /*
  * WebServer::handleSaveAppEngineAddress
@@ -242,7 +258,7 @@ void WebServer::handleScanWifi() {
         <div class=\"fifth-bar bar\"></div>\n\
       </div>\n\
     </td>\n\
-    <td align=\"right\"><a href=\"javascript:OpenSSIDPopup('Drake');\" class=\"button\">Add</a></td>\n\
+    <td align=\"right\"><a href=\"javascript:OpenSSIDPopup('" + WiFi.SSID(i) + "');\" class=\"button\">Add</a></td>\n\
   </tr>\n";
   }
   /*<tr>\n\
@@ -295,7 +311,7 @@ void WebServer::handleRoot() {
   String configuredWifiText;
   Serial.print("Get Wifi Count");
   int wifiCount = WebServer::_configuration.getWifiCount();
-  /*if (wifiCount > 0) {
+  if (wifiCount > 0) {
     configuredWifiText = "<table>\n\
         <tr>\n\
           <th align=\"left\">SSID</th>\n\
@@ -305,12 +321,16 @@ void WebServer::handleRoot() {
     {
       Serial.print("Get wifi");
       Serial.print(i);
+      Serial.print("\r\n");
       WifiData wifiData = WebServer::_configuration.getWifiData(i);
+      Serial.print("Wifi ssid: ");
+      Serial.print(wifiData.ssid);
+      Serial.print("\r\n");
       configuredWifiText = configuredWifiText + "<tr>\n\
-          <td>" + wifiData.ssid + " (Connected)</td>\n\
+          <td>" + wifiData.ssid + "</td>\n\
           <td align=\"right\">\n\
-            <a href=\"javascript:TestSSID('Drake'); \" class=\"button\">Test</a>\n\
-            <a href=\"javascript:RemoveSSID('Drake');\" class=\"button\">Delete</a>\n\
+            <a href=\"javascript:TestSSID('" + wifiData.ssid + "'); \" class=\"button\">Test</a>\n\
+            <a href=\"javascript:RemoveSSID('" + wifiData.ssid + "');\" class=\"button\">Delete</a>\n\
           </td>\n\
         </tr>\n";
     }
@@ -319,7 +339,7 @@ void WebServer::handleRoot() {
   }
   else {
     configuredWifiText = "No Wifi configured";
-  }*/
+  }
   
   String response = "<html>\n\
  <head>\n\
@@ -336,7 +356,7 @@ void WebServer::handleRoot() {
           <a class=\"close\" href=\"javascript:ClosePopup();\">&times;</a>\n\
           <div class=\"content\">\n\
             <p>Please enter the password for this wifi</p>\n\
-            <input type=\"hidden\" id=\"ssid_name\"/>\n\
+            <input type=\"hidden\" name=\"ssid_name\" id=\"ssid_name\"/>\n\
             <span class=\"label\" id=\"ssid_name_text\"></span>\n\
             <p><input id=\"ssid_password\" name=\"ssid_password\" type=\"password\" class=\"textbox\"/></p><br>\n\
             <p>\n\
@@ -370,27 +390,8 @@ void WebServer::handleRoot() {
       <p>\n\
       <a href=\"javascript:SaveAppEngineAddress();\" class=\"button\">Save</a><br/><br/>\n\
       </p>\n\
-      <h2>Configured Wifi</h2>\n\
-      <table>\n\
-        <tr>\n\
-          <th align=\"left\">SSID</th>\n\
-          <th></th>\n\
-        </tr>\n\
-        <tr>\n\
-          <td>Drake (Connected)</td>\n\
-          <td align=\"right\">\n\
-            <a href=\"javascript:TestSSID('Drake'); \" class=\"button\">Test</a>\n\
-            <a href=\"javascript:RemoveSSID('Drake');\" class=\"button\">Delete</a>\n\
-          </td>\n\
-        </tr>\n\
-        <tr>\n\
-          <td>Monique</td>\n\
-          <td align=\"right\">\n\
-            <a href=\"javascript:TestSSID('Monique'); \" class=\"button\">Test</a>\n\
-            <a href=\"javascript:RemoveSSID('Monique'); \" class=\"button\">Delete</a>\n\
-          </td>\n\
-        </tr>\n\
-      </table>\n\
+      <h2>Configured Wifi</h2>\n"\
+      + configuredWifiText + "\
       \n\
       <br/><h2>Configure new Wifi</h2>\n\
         <a class=\"button\" href=\"javascript:ScanWifi()\">\n\
@@ -501,7 +502,7 @@ function ClosePopup() {\n\
 function RemoveSSID(ssid)\n\
 {\n\
   if (confirm(\"Do you really want to remove \" + ssid)) {\n\
-    document.location.href='remove/' + ssid;\n\
+    document.location.href='remove?ssid=' + ssid;\n\
   }\n\
 }\n\
 \n\

@@ -33,15 +33,13 @@ Configuration::Configuration()
   _loaded = false;
 }
 /*
+ * Configuration::setTransmitterId
+ * -------------------------------
  * This method will save the transmitter Id to the EEPROM
  */
 void Configuration::setTransmitterId(uint32_t transmitterId) {
   BridgeConfig* bridgeConfig = getBridgeConfig();
-  Serial.print("setTransmitterId: ");
-  Serial.print(transmitterId);
-  Serial.print("\r\n");
   bridgeConfig->transmitterId = transmitterId;
-  //EEPROM_writeAnything(1, transmitterId);
 }
 
 /*
@@ -51,10 +49,6 @@ void Configuration::setTransmitterId(uint32_t transmitterId) {
  */
 void Configuration::setAppEngineAddress(String address) {
   BridgeConfig* bridgeConfig = getBridgeConfig();
-  
-  Serial.print("Set App engine address to: ");
-  Serial.print(address);
-  Serial.print("\r\n");
   bridgeConfig->appEngineAddress = address;
 }
 
@@ -65,12 +59,42 @@ void Configuration::setAppEngineAddress(String address) {
  */
 void Configuration::saveSSID(String ssidName, String ssidPassword) {
   BridgeConfig* bridgeConfig = getBridgeConfig();
+  Serial.print("Save SSID\r\n");
   // Create wifi Data Object
   WifiData* wifiData = (WifiData*)calloc(1, sizeof(WifiData));
+  wifiData->ssid = ssidName;
+  wifiData->password = ssidPassword;
   // Add to saved wifi list
   bridgeConfig->wifiList->add(*wifiData);
+  Serial.print("New wifi ssid: ");
+  Serial.print(wifiData->ssid);
+  Serial.print("\r\nSize is now:");
+  Serial.print(bridgeConfig->wifiList->size());
+  Serial.print("\r\n");
 }
 
+/* 
+ * Configuration::deleteSSID
+ * -------------------------
+ * This method will delete the specified ssid if found
+ */
+void Configuration::deleteSSID(String ssidName) {
+  Serial.print("Delete SSID\r\n");
+  BridgeConfig* bridgeConfig = getBridgeConfig();
+  for(int i = bridgeConfig->wifiList->size() - 1; i >= 0; i--)
+  {
+    Serial.print("Check ssid no:");
+    Serial.print(i);
+    Serial.print("\r\n");
+    WifiData wifiData = Configuration::getWifiData(i);
+    if(wifiData.ssid == ssidName) {
+      Serial.print("Needs to be removed\r\n");
+      // remove from the list
+      bridgeConfig->wifiList->remove(i);
+      Serial.print("Removed from list\r\n");
+    }
+  }
+}
 /*
  * Configuration::getWifiData
  * --------------------------
@@ -88,15 +112,13 @@ WifiData Configuration::getWifiData(int position) {
  */
 int Configuration::getWifiCount() {
   BridgeConfig* bridgeConfig = getBridgeConfig();
-  Serial.print("Got config");
   LinkedList<WifiData>* wifiList = bridgeConfig->wifiList;
-  Serial.print("Got wifi List");
-  Serial.print("Size is ");
-  Serial.print(bridgeConfig->wifiList->size());
   return bridgeConfig->wifiList->size();
 }
 
 /*
+ * Configuration::getTransmitterId
+ * -------------------------------
  * This method will get the transmitter Id from the EEPROM
  */
 uint32_t Configuration::getTransmitterId() {
@@ -115,13 +137,13 @@ uint32_t Configuration::getTransmitterId() {
 }
 
 /*
+ * Configuration::getAppEngineAddress
+ * ----------------------------------
  * This method will get the Google App Engine Address
  */
 String Configuration::getAppEngineAddress() {
   BridgeConfig* bridgeConfig = getBridgeConfig();
 
-  Serial.print("App engine address: ");
-  Serial.print(bridgeConfig->appEngineAddress);
   if(bridgeConfig->appEngineAddress.length() > 0)
   {
     return bridgeConfig->appEngineAddress;
@@ -151,8 +173,13 @@ BridgeConfig* Configuration::getBridgeConfig() {
  * returns: The bridge configuration struct
  */
 BridgeConfig* Configuration::LoadConfig() {
+  /*LinkedList<WifiData> *test= new LinkedList<WifiData>();
+  Serial.print( test->size());*/
+  
   Serial.print("Load configuration\r\n");
   BridgeConfig* config = (BridgeConfig*)calloc(1, sizeof(BridgeConfig));// BridgeConfig();
+  config->wifiList = new LinkedList<WifiData>();
+  Serial.print( config->wifiList->size());
   String eepromData;
   bool continueReading = true;
   bool separatorFound = false;
@@ -179,10 +206,8 @@ BridgeConfig* Configuration::LoadConfig() {
       Serial.print(newChar);
       if (!(newChar == 0x00 || newChar == 255 || i == 4095)) // End of configuration
       {
-        if (newChar == CONFIGURATION_SEPARATOR)
-        {
-          separatorFound = true;
-        }
+        separatorFound = newChar == CONFIGURATION_SEPARATOR;
+        
         if (separatorFound)
         {
           Serial.print("Separator found\r\n");
@@ -209,7 +234,7 @@ BridgeConfig* Configuration::LoadConfig() {
           }
           else // Everything else is saved wifi SSID and Passwords
           {
-            /*if (readingSSID)
+            if (readingSSID)
             {
               nextSSID = eepromData;
             }
@@ -217,11 +242,16 @@ BridgeConfig* Configuration::LoadConfig() {
             {
               nextPassword = eepromData;
               WifiData newWifi = WifiData();
+              Serial.print("New Wifi Loaded:\r\n");
               newWifi.ssid = nextSSID;
+              Serial.print(newWifi.ssid);
+              Serial.print("|");
               newWifi.password = nextPassword;
+              Serial.print(newWifi.password);
+              Serial.print("\r\n");
               config->wifiList->add(newWifi);
             }
-            readingSSID = !readingSSID;*/
+            readingSSID = !readingSSID;
           }
           eepromData = ""; // Reset data to read
         }
@@ -256,10 +286,8 @@ BridgeConfig* Configuration::LoadConfig() {
  * This method will save the Data back to the EEPROM
  */
 void Configuration::SaveConfig() {
+  BridgeConfig* bridgeConfig = Configuration::getBridgeConfig();
   int position;
-  if(!_loaded) {
-    _bridgeConfig = LoadConfig();
-  }
   Serial.print("Save configuration\r\n");
   WriteEEPROM(0, '¶');
   uint32_t transmitterId = Configuration::getTransmitterId();
@@ -271,8 +299,10 @@ void Configuration::SaveConfig() {
   Serial.print(position);
   Serial.print("\r\n");
   // Write App engine address
-  Configuration::WriteStringToEEPROM(position, _bridgeConfig->appEngineAddress);
-  position = position + _bridgeConfig->appEngineAddress.length();
+  if (_bridgeConfig->appEngineAddress.length() > 0) {
+    Configuration::WriteStringToEEPROM(position, bridgeConfig->appEngineAddress);
+    position = position + _bridgeConfig->appEngineAddress.length();
+  }
   Configuration::WriteEEPROM(position , CONFIGURATION_SEPARATOR);
   position++;
   
@@ -281,38 +311,53 @@ void Configuration::SaveConfig() {
   Serial.print("\r\n");
   
   // now write hotspot wifi name
-  Configuration::WriteStringToEEPROM(position, _bridgeConfig->hotSpotName);
-  position = position + _bridgeConfig->hotSpotName.length();
+  if (_bridgeConfig->hotSpotName.length() > 0) {
+    Configuration::WriteStringToEEPROM(position, bridgeConfig->hotSpotName);
+    position = position + bridgeConfig->hotSpotName.length();
+  }
   Configuration::WriteEEPROM(position , CONFIGURATION_SEPARATOR);
   position++;
   Serial.print("HotSpotWifi Password");
   Serial.print(position);
   Serial.print("\r\n");
   // now write hotspot wifi password
-  Configuration::WriteStringToEEPROM(position, _bridgeConfig->hotSpotPassword);
-  position = position + _bridgeConfig->hotSpotPassword.length();
+  if (_bridgeConfig->hotSpotPassword.length() > 0) {
+    Configuration::WriteStringToEEPROM(position, bridgeConfig->hotSpotPassword);
+    position = position + bridgeConfig->hotSpotPassword.length();
+  }
   Configuration::WriteEEPROM(position , CONFIGURATION_SEPARATOR);
   position++;
-  /*
+  
   // Now write all saved wifi ssid and password
-  int arrayLength = _bridgeConfig->wifiList->size();
+  
+  int arrayLength = bridgeConfig->wifiList->size();
+  Serial.print(arrayLength);
+  Serial.print(" Wifi to save:\r\n");
   for(int i = 0; i < arrayLength; i ++)
   {
-    WifiData wifiData = _bridgeConfig->wifiList->get(i);
-    EEPROM_writeAnything(4, wifiData.ssid);
-    position = position + wifiData.ssid.length();
+    WifiData wifiData = bridgeConfig->wifiList->get(i);
+    if (wifiData.ssid.length() > 0) {
+      Serial.print(wifiData.ssid);
+      WriteStringToEEPROM(position, wifiData.ssid);
+      position = position + wifiData.ssid.length();
+    }
+    Serial.print("|");
     Configuration::WriteEEPROM(position, CONFIGURATION_SEPARATOR);
     position++;
-    EEPROM_writeAnything(4, wifiData.password);
-    position = position + wifiData.password.length();
+    if (wifiData.password.length() > 0) {
+      Serial.print(wifiData.password);
+      WriteStringToEEPROM(position, wifiData.password);
+      position = position + wifiData.password.length();
+    }
     Configuration::WriteEEPROM(position, CONFIGURATION_SEPARATOR);
     position++;
-  }*/
-  Configuration::WriteEEPROM(position , 0x00); // NUL character at the end
+  }
+  Configuration::WriteEEPROM(position , 0x255); // 255 character at the end
   EEPROM.commit();
   Serial.print("Committed");
   _loaded = false;
-  free(_bridgeConfig);
+  free(bridgeConfig->wifiList);
+  free(bridgeConfig);
 }
 
 /*
@@ -322,7 +367,7 @@ void Configuration::SaveConfig() {
  */
 void Configuration::WriteStringToEEPROM(int position, String data)
 {
-  for(int i = 0; i < data.length(); i++){
+  for(int i = 0; i < data.length() - 1; i++){
     Configuration::WriteEEPROM(position + i, data.charAt(i));
   }
 }

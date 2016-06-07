@@ -27,6 +27,7 @@ class Configuration {
     void setTransmitterId(uint32_t transmitterId);
     void setAppEngineAddress(String address);
     void saveSSID(String ssidName, String ssidPassword);
+    void deleteSSID(String ssidName);
     uint32_t getTransmitterId();
     String getAppEngineAddress();
     void SaveConfig();
