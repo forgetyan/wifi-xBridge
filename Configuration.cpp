@@ -205,6 +205,7 @@ BridgeConfig* Configuration::LoadConfig() {
       byte newChar = EEPROM.read(i);
       Serial.print("Char: ");
       Serial.print(newChar);
+      Serial.print("\r\n");
       if (!(newChar == 0x00 || newChar == 255 || i == 4095)) // End of configuration
       {
         separatorFound = newChar == CONFIGURATION_SEPARATOR;
@@ -353,8 +354,10 @@ void Configuration::SaveConfig() {
     Configuration::WriteEEPROM(position, CONFIGURATION_SEPARATOR);
     position++;
   }
-  Configuration::WriteEEPROM(position , 0x255); // 255 character at the end
+  Configuration::WriteEEPROM(position , 255); // 255 character at the end
+  delay(500); // EEPROM Save + Serial.print sometime generate garbage...
   EEPROM.commit();
+  delay(500); // EEPROM Save + Serial.print sometime generate garbage...
   Serial.print("Committed");
   //_loaded = false;
   //free(bridgeConfig->wifiList);

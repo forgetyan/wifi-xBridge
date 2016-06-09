@@ -43,32 +43,41 @@
 #include <SoftwareSerial.h>
 #include <ESP8266WiFi.h>
 #include "WebServer.h"
-//#include <ESP8266WiFiMulti.h>
+#include <ESP8266WiFiMulti.h>
 #include <ESP8266WebServer.h>
 #include "Configuration.h"
 #include "DexcomHelper.h"
 
 /*
+ * FUNCTION PROTOTYPES (Needed since ESP8266WiFiMulti.h was included...)
+ */
+void StartWifiConnection();
+void OpenDebugConnection();
+void SendDebugText(String debugText);
+void SendDebugText(char debugText);
+void SendDebugText(char* debugText);
+void SendDebugText(uint32_t debugText);
+void SendDebugText(int debugText);
+void ManageConnectionStarted(int receivedValue);
+void ProcessWixelMessage(unsigned char* message);
+void SendMessage(unsigned int messageId);
+void SendMessage(unsigned int messageId, uint32_t messageContent);
+void SendMessage(unsigned int messageId, char* messageContent);
+
+/*
  * Wixel Configuration
  */
 const String COMMUNICATION_STARTED_STRING = "AT+RESET";
-const char DEXCOM_TRANSMITTER_ID[6] = "6BCFK";
 
 /*
  * Wifi Configuration
  */
-const char* WIFI_SSID = "Drake";
-const char* WIFI_PASSWORD = "G6kpEhWCpB";
 
 const char* DEBUG_HOST = "192.168.0.192";
 const int DEBUG_PORT = 8001;
 
 WiFiClient _debugClient;
-
-/*
- * Googe App Engine Configuration
- */
-const char* appEngineHost = "jay-t1d.appspot.com";
+ESP8266WiFiMulti wifiMulti;
 
 /*
  * Protocol descriptions:
@@ -142,13 +151,6 @@ typedef struct Wixel_RawRecord_Struct
   uint8_t function; // Byte representing the xBridge code funcitonality.  01 = this level.
 } RawRecord;
 
-// software serial #1: RX = digital pin 2, TX = digital pin 3
-//SoftwareSerial uartPort(2, 3);
-
-// We need to wait for the AT+RESET command before any real communication with
-// the xBridge. These parameters will keep track of this.
-bool _communicationStarted = false;
-int _communicationStartedCharacter = 0;
 int _messageLength = 0;
 int _messagePosition = 0;
 unsigned char* _message;
@@ -165,35 +167,17 @@ void setup() {
   // Open serial communications
   Serial.begin(9600);
   EEPROM.begin(4096); // Use maximum allowed size
-  delay(4000);
   /*while (!Serial) {
     ; // wait for serial port to connect. Needed for native USB port only
   }*/
+  //String.toCharArray(_configuration.getAppEngineAddress(), 
   _webServer.start();
   StartWifiConnection();
   OpenDebugConnection();
-  // WiFi.onEvent(WiFiEvent);
-  _communicationStarted = true;
   #ifdef IS_DEBUG
   SendDebugText("wifi-xBridge Started!\r\nDebugging mode ON\r\n");
   #endif
 }
-
-/*
-void WiFiEvent(WiFiEvent_t event) {
-    //Serial.printf("[WiFi-event] event: %d\n", event);
-
-    switch(event) {
-        case WIFI_EVENT_STAMODE_GOT_IP:
-            /*Serial.println("WiFi connected");
-            Serial.println("IP address: ");
-            Serial.println(WiFi.localIP());* /
-            break;
-        case WIFI_EVENT_STAMODE_DISCONNECTED:
-            //Serial.println("WiFi lost connection");
-            break;
-    }
-}*/
 
 /*
  * StartWifiConnection
@@ -203,9 +187,33 @@ void WiFiEvent(WiFiEvent_t event) {
  */
 void StartWifiConnection(){
   // Open WiFi connection
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
+  for(int i = 0 ; i < _configuration.getWifiCount(); i++)
+  {
+    WifiData* data = _configuration.getWifiData(i);
+    int ssidLength = data->ssid.length() + 1;
+    int passwordLength = data->password.length() + 1;
+    char ssidChars[ssidLength];
+    char passwordChars[passwordLength];
+    data->ssid.toCharArray(ssidChars, ssidLength);
+    data->password.toCharArray(passwordChars, passwordLength);
+  
+    wifiMulti.addAP(ssidChars, passwordChars);
+  }
+  int connectionTry = 0;
+  while (WiFi.status() != WL_CONNECTED && connectionTry < 120) {
+    connectionTry++;
+    if(wifiMulti.run() == WL_CONNECTED) {
+      Serial.print("Connected\r\n");
+    }
+    else
+    {
+      if (connectionTry % 5 == 0)
+      {
+        Serial.print("Not connected :(\r\n");
+        _webServer.loop();
+      }
+      delay(500);
+    }
   }
 }
 
@@ -249,7 +257,6 @@ void CloseDebugConnection() {
  * Classic Arduino Loop method
  */
 void loop() {
-    //Serial.print("Test");
   _webServer.loop();
   // Check is there is data on RX port from Wixel
   while (Serial.available() > 0) {
@@ -265,14 +272,7 @@ void loop() {
     SendDebugText(")");
     SendDebugText("\r\n");
     #endif
-    // We should wait for the AT+RESET message before parsing anything else. 
-    // I don't see the point of using any other character before that for now.
-    if (!_communicationStarted) {
-      ManageConnectionNotStarted(receivedValue);
-    }
-    else {
-      ManageConnectionStarted(receivedValue);
-    }
+    ManageConnectionStarted(receivedValue);
   }
 
   // If there is data comming from Serial port, send it back to the Wixel (For debugging purpose)
@@ -291,11 +291,13 @@ void loop() {
  * debugText: The text to be sent
  */
 void SendDebugText(String debugText){
+  #ifdef IS_DEBUG
   if (WiFi.status() == WL_CONNECTED) {
     _debugClient.print(debugText);
   }
   Serial.print(debugText);
   CloseDebugConnection();
+  #endif
 }
 
 /*
@@ -305,10 +307,12 @@ void SendDebugText(String debugText){
  * debugText: The text to be sent
  */
 void SendDebugText(char debugText){
+  #ifdef IS_DEBUG
   if (WiFi.status() == WL_CONNECTED) {
     _debugClient.print(debugText);
   }
   Serial.write(debugText);
+  #endif
 }
 
 /*
@@ -318,47 +322,30 @@ void SendDebugText(char debugText){
  * debugText: The text to be sent
  */
 void SendDebugText(char* debugText){
+  #ifdef IS_DEBUG
   if (WiFi.status() == WL_CONNECTED) {
     _debugClient.print(debugText);
   }
   Serial.write(debugText);
+  #endif
 }
 
 void SendDebugText(uint32_t debugText){
+  #ifdef IS_DEBUG
   if (WiFi.status() == WL_CONNECTED) {
     _debugClient.print(debugText);
   }
   Serial.write(debugText);
+  #endif
 }
 
 void SendDebugText(int debugText){
+  #ifdef IS_DEBUG
   if (WiFi.status() == WL_CONNECTED) {
     _debugClient.print(debugText);
   }
   Serial.write(debugText);
-}
-
-/*
- * Function: ManageConnectionNotStarted
- * ------------------------------------
- * We just received a byte from the Wixel but the real communication is not started yet (Wait for AT+RESET)
- * 
- * receivedValue: The value we just received on Serial Port
- */
-void ManageConnectionNotStarted(int receivedValue) {
-  if (COMMUNICATION_STARTED_STRING[_communicationStartedCharacter] == char(receivedValue)) {
-    _communicationStartedCharacter++;
-  }
-  else{
-    _communicationStartedCharacter = 0;
-  }
-  if(COMMUNICATION_STARTED_STRING.length() == _communicationStartedCharacter)
-  {
-    _communicationStarted = true;
-    #ifdef IS_DEBUG
-    SendDebugText("AT+RESET was received. Wixel communication officially started\r\n");
-    #endif
-  }
+  #endif
 }
 
 long timeElapsedLastReception;
@@ -437,12 +424,19 @@ long lastTransmission;
  */
 void SendAppEngineData(struct Wixel_RawRecord_Struct dexcomData)
 {
-  //char transmitterId[ 16 ];
-  //sprintf(transmitterId,"%lu", dexcomData.txId);
-  uint32_t transmitterId = dexcomData.dex_src_id;//DexcomAsciiToSrc((char*)DEXCOM_TRANSMITTER_ID);
+  uint32_t transmitterId = dexcomData.dex_src_id;
   #ifdef IS_DEBUG
   SendDebugText("Preparing to send data to App Engine:\r\n");
   #endif
+
+  String appEngineAddress = _configuration.getAppEngineAddress();
+  char appEngineCharArray[appEngineAddress.length() + 1];
+  appEngineAddress.toCharArray(appEngineCharArray, appEngineAddress.length() + 1);
+  char* appEngineHost = appEngineCharArray;
+  Serial.print("AppEngineHost: ");
+  Serial.print(appEngineHost);
+  Serial.print("\r\n");
+
   WiFiClient client;
   if (!client.connect(appEngineHost, HTTP_PORT)) {
     #ifdef IS_DEBUG
@@ -586,6 +580,8 @@ void ProcessWixelMessage(unsigned char* message)
         SendDebugText(transmitterIdSrc);
         SendDebugText("\r\n");
         #endif
+        uint32_t configuredTransmitterId = _configuration.getTransmitterId();
+        char* configuredTransmitterIdAscii = _dexcomHelper.DexcomSrcToAscii(configuredTransmitterId);
         char* transmitterIdAscii = _dexcomHelper.DexcomSrcToAscii(transmitterIdSrc);
         #ifdef IS_DEBUG
         SendDebugText("Wixel thinks the transmitter ID is: ");
@@ -593,17 +589,18 @@ void ProcessWixelMessage(unsigned char* message)
         SendDebugText("\r\n");
         #endif
         // Check if it's the proper transmitter ID
-        if (strcmp(transmitterIdAscii, DEXCOM_TRANSMITTER_ID) == 0)
+        
+        if (strcmp(transmitterIdAscii, configuredTransmitterIdAscii) == 0)
         {
           SendDebugText("Good, the Wixel has proper transmitter ID\r\n");
         }
         else
         {
           SendDebugText("Lol, send the proper Transmitter ID to the Wixel right now!\r\n");
-          uint32_t dexcomTrxIDSrc = _dexcomHelper.DexcomAsciiToSrc((char*)DEXCOM_TRANSMITTER_ID);
-          SendMessage(WIXEL_COMM_TX_SEND_TRANSMITTER_ID, dexcomTrxIDSrc);
+          SendMessage(WIXEL_COMM_TX_SEND_TRANSMITTER_ID, configuredTransmitterId);
         }
         free(transmitterIdAscii);
+        free(configuredTransmitterIdAscii);
       }
       break;
     default:
