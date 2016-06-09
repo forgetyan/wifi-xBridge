@@ -187,32 +187,35 @@ void setup() {
  */
 void StartWifiConnection(){
   // Open WiFi connection
-  for(int i = 0 ; i < _configuration.getWifiCount(); i++)
+  if (_configuration.getWifiCount() > 0)
   {
-    WifiData* data = _configuration.getWifiData(i);
-    int ssidLength = data->ssid.length() + 1;
-    int passwordLength = data->password.length() + 1;
-    char ssidChars[ssidLength];
-    char passwordChars[passwordLength];
-    data->ssid.toCharArray(ssidChars, ssidLength);
-    data->password.toCharArray(passwordChars, passwordLength);
-  
-    wifiMulti.addAP(ssidChars, passwordChars);
-  }
-  int connectionTry = 0;
-  while (WiFi.status() != WL_CONNECTED && connectionTry < 120) {
-    connectionTry++;
-    if(wifiMulti.run() == WL_CONNECTED) {
-      Serial.print("Connected\r\n");
-    }
-    else
+    for(int i = 0 ; i < _configuration.getWifiCount(); i++)
     {
-      if (connectionTry % 5 == 0)
-      {
-        Serial.print("Not connected :(\r\n");
-        _webServer.loop();
+      WifiData* data = _configuration.getWifiData(i);
+      int ssidLength = data->ssid.length() + 1;
+      int passwordLength = data->password.length() + 1;
+      char ssidChars[ssidLength];
+      char passwordChars[passwordLength];
+      data->ssid.toCharArray(ssidChars, ssidLength);
+      data->password.toCharArray(passwordChars, passwordLength);
+    
+      wifiMulti.addAP(ssidChars, passwordChars);
+    }
+    int connectionTry = 0;
+    while (WiFi.status() != WL_CONNECTED && connectionTry < 120) {
+      connectionTry++;
+      if(wifiMulti.run() == WL_CONNECTED) {
+        Serial.print("Connected\r\n");
       }
-      delay(500);
+      else
+      {
+        if (connectionTry % 5 == 0)
+        {
+          Serial.print("Not connected :(\r\n");
+        }
+        _webServer.loop();
+        delay(500);
+      }
     }
   }
 }
@@ -556,7 +559,7 @@ void ProcessWixelMessage(unsigned char* message)
 
       dexcomData.function = message[16];
       
-      SendDebugText("\r\raw: ");
+      SendDebugText("\r\nraw: ");
       SendDebugText(dexcomData.raw);
       SendDebugText("\r\nfiltered: ");
       SendDebugText(dexcomData.filtered);
