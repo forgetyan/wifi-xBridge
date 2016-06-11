@@ -77,7 +77,7 @@ const char* DEBUG_HOST = "192.168.0.192";
 const int DEBUG_PORT = 8001;
 
 WiFiClient _debugClient;
-ESP8266WiFiMulti wifiMulti;
+
 
 /*
  * Protocol descriptions:
@@ -186,37 +186,59 @@ void setup() {
  * Todo: This should use a dynamic list of wifi
  */
 void StartWifiConnection(){
+  ESP8266WiFiMulti wifiMulti;
+  //Serial.write("StartWifiConnection");
   // Open WiFi connection
   if (_configuration.getWifiCount() > 0)
   {
+    //Serial.print(_configuration.getWifiCount());
+    //Serial.print("WiFi found\r\n");
     for(int i = 0 ; i < _configuration.getWifiCount(); i++)
     {
       WifiData* data = _configuration.getWifiData(i);
       int ssidLength = data->ssid.length() + 1;
       int passwordLength = data->password.length() + 1;
-      char ssidChars[ssidLength];
-      char passwordChars[passwordLength];
+      char ssidChars[ssidLength + 1];
+      char passwordChars[passwordLength + 1];
+      /*Serial.print(_configuration.getWifiCount());
+      Serial.print("Adding Wifi:\r\n");
+      Serial.print(data->ssid);
+      Serial.print("|");
+      Serial.print(data->password);
+      Serial.print("\r\n");*/
       data->ssid.toCharArray(ssidChars, ssidLength);
       data->password.toCharArray(passwordChars, passwordLength);
-    
       wifiMulti.addAP(ssidChars, passwordChars);
     }
     int connectionTry = 0;
+    //Serial.print("Trying to connect");
+    const char* WIFI_SSID = "Drake";
+    const char* WIFI_PASSWORD = "G6kpEhWCpB";
+
+    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+    while (WiFi.status() != WL_CONNECTED) {
+      delay(500);
+    }
+   /*
     while (WiFi.status() != WL_CONNECTED && connectionTry < 120) {
+      Serial.print(connectionTry);
+      Serial.print("\r\n");
       connectionTry++;
       if(wifiMulti.run() == WL_CONNECTED) {
         Serial.print("Connected\r\n");
       }
       else
       {
+        Serial.print("Failed\r\n");
         if (connectionTry % 5 == 0)
         {
           Serial.print("Not connected :(\r\n");
         }
+        Serial.print("Server Loop\r\n");
         _webServer.loop();
         delay(500);
       }
-    }
+    }*/
   }
 }
 
@@ -298,7 +320,7 @@ void SendDebugText(String debugText){
   if (WiFi.status() == WL_CONNECTED) {
     _debugClient.print(debugText);
   }
-  Serial.print(debugText);
+  //Serial.print(debugText);
   CloseDebugConnection();
   #endif
 }
@@ -314,7 +336,7 @@ void SendDebugText(char debugText){
   if (WiFi.status() == WL_CONNECTED) {
     _debugClient.print(debugText);
   }
-  Serial.write(debugText);
+  //Serial.write(debugText);
   #endif
 }
 
@@ -329,7 +351,7 @@ void SendDebugText(char* debugText){
   if (WiFi.status() == WL_CONNECTED) {
     _debugClient.print(debugText);
   }
-  Serial.write(debugText);
+  //Serial.write(debugText);
   #endif
 }
 
@@ -338,7 +360,7 @@ void SendDebugText(uint32_t debugText){
   if (WiFi.status() == WL_CONNECTED) {
     _debugClient.print(debugText);
   }
-  Serial.write(debugText);
+  //Serial.write(debugText);
   #endif
 }
 
@@ -347,7 +369,7 @@ void SendDebugText(int debugText){
   if (WiFi.status() == WL_CONNECTED) {
     _debugClient.print(debugText);
   }
-  Serial.write(debugText);
+  //Serial.write(debugText);
   #endif
 }
 
