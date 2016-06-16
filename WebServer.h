@@ -14,6 +14,7 @@ class WebServer {
     WebServer();
     void start();
     void loop();
+    void setConfiguration(Configuration configuration);
   private:
     String getDexcomId();
     void handleRoot();

@@ -172,6 +172,7 @@ void setup() {
     ; // wait for serial port to connect. Needed for native USB port only
   }*/
   //String.toCharArray(_configuration.getAppEngineAddress(), 
+  _webServer.setConfiguration(_configuration);
   _webServer.start();
   StartWifiConnection();
   OpenDebugConnection();

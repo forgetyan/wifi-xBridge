@@ -15,6 +15,10 @@ WebServer::WebServer(){
   WebServer::ACCESS_POINT_PWD = "";
 }
 
+void WebServer::setConfiguration(Configuration configuration) {
+  WebServer::_configuration = configuration;
+}
+
 /*
  * WebServer::padding
  * ------------------

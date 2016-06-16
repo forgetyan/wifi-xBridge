@@ -177,10 +177,8 @@ BridgeConfig* Configuration::LoadConfig() {
   /*LinkedList<WifiData> *test= new LinkedList<WifiData>();
   Serial.print( test->size());*/
   
-  Serial.print("Load configuration\r\n");
   BridgeConfig* config = (BridgeConfig*)calloc(1, sizeof(BridgeConfig));// BridgeConfig();
   config->wifiList = new LinkedList<WifiData*>();
-  Serial.print( config->wifiList->size());
   String eepromData;
   bool continueReading = true;
   bool separatorFound = false;
@@ -195,34 +193,36 @@ BridgeConfig* Configuration::LoadConfig() {
     Serial.print("Configuration Valid\r\n");
     // Configuration is valid
     // Read transmitter ID
-    EEPROM_readAnything(1, config->transmitterId);
-    Serial.print("Transmitter ID:");
-    int i = 4;
+  
+  EEPROM_readAnything(1, config->transmitterId);
+  //config->transmitterId = EEPROM.read(1) | ( (int)EEPROM.read(2) << 8 ) | ( (int)EEPROM.read(3) << 16 ) | ( (int)EEPROM.read(4) << 24 ); 
+  /*Serial.print("Transmitter ID:");
+  Serial.print(config->transmitterId);
+  Serial.print("\r\n");
+  for(int i = 0; i < 4; i++)
+  {
+    Serial.print(EEPROM.read(i+1));
+    Serial.print("\r\n");
+  }*/
+  
+  
+
+    int i = 5;
     config->appEngineAddress = "";
     config->hotSpotName = "";
     config->hotSpotPassword = "";
     while(continueReading) {
       byte newChar = EEPROM.read(i);
-      Serial.print("Char: ");
-      Serial.print(newChar);
-      Serial.print("\r\n");
       if (!(newChar == 0x00 || newChar == 255 || i == 4095)) // End of configuration
       {
         separatorFound = newChar == CONFIGURATION_SEPARATOR;
         
         if (separatorFound)
         {
-          Serial.print("Separator found\r\n");
           if (!appEngineRead)
           {
             appEngineRead = true;
-            Serial.print("App engine address:");
-            Serial.print(eepromData);
-            Serial.print("\r\n");
             config->appEngineAddress = eepromData;
-            Serial.print("App engine variable: \r\n");
-            Serial.print(config->appEngineAddress);
-            Serial.print("\r\n");
           }
           else if (!hotspotNameRead)
           {
@@ -244,13 +244,8 @@ BridgeConfig* Configuration::LoadConfig() {
             {
               nextPassword = eepromData;
               WifiData* newWifi = (WifiData*)calloc(1, sizeof(WifiData));
-              Serial.print("New Wifi Loaded:\r\n");
               newWifi->ssid = nextSSID;
-              Serial.print(newWifi->ssid);
-              Serial.print("|");
               newWifi->password = nextPassword;
-              Serial.print(newWifi->password);
-              Serial.print("\r\n");
               config->wifiList->add(newWifi);
             }
             readingSSID = !readingSSID;
@@ -271,8 +266,6 @@ BridgeConfig* Configuration::LoadConfig() {
   }
   else
   {
-    Serial.write("firstChar was: ");
-    Serial.write(firstChar);
     // Configuration is invalid
     config->appEngineAddress = "";
     config->hotSpotName = "";
@@ -290,16 +283,25 @@ BridgeConfig* Configuration::LoadConfig() {
 void Configuration::SaveConfig() {
   BridgeConfig* bridgeConfig = Configuration::getBridgeConfig();
   int position;
-  Serial.print("Save configuration\r\n");
   WriteEEPROM(0, '¶');
   uint32_t transmitterId = Configuration::getTransmitterId();
+  /*byte transmitterIdByteArray[4];
+  transmitterIdByteArray[0] = lowByte(transmitterId);
+  transmitterIdByteArray[1] = lowByte(transmitterId >> 8);
+  transmitterIdByteArray[2] = lowByte(transmitterId >> 16);
+  transmitterIdByteArray[3] = lowByte(transmitterId >> 24);
+  for(int i = 0; i < 4; i++)
+  {
+    Serial.print(transmitterIdByteArray[i]);
+    Serial.print("\r\n");
+  }*/
+  /*Configuration::WriteEEPROM(1, transmitterIdByteArray[0]);
+  Configuration::WriteEEPROM(2, transmitterIdByteArray[1]);
+  Configuration::WriteEEPROM(3, transmitterIdByteArray[2]);
+  Configuration::WriteEEPROM(4, transmitterIdByteArray[3]);*/
   EEPROM_writeAnything(1, transmitterId);
-  Serial.print("Transmitter written\r\n");
-  position = 4;
+  position = 5;
 
-  Serial.print("Transmitter App engine address position: ");
-  Serial.print(position);
-  Serial.print("\r\n");
   // Write App engine address
   if (_bridgeConfig->appEngineAddress.length() > 0) {
     Configuration::WriteStringToEEPROM(position, bridgeConfig->appEngineAddress);
@@ -308,9 +310,6 @@ void Configuration::SaveConfig() {
   Configuration::WriteEEPROM(position , CONFIGURATION_SEPARATOR);
   position++;
   
-  Serial.print("HotSpotWifi Name");
-  Serial.print(position);
-  Serial.print("\r\n");
   
   // now write hotspot wifi name
   if (_bridgeConfig->hotSpotName.length() > 0) {
@@ -319,9 +318,6 @@ void Configuration::SaveConfig() {
   }
   Configuration::WriteEEPROM(position , CONFIGURATION_SEPARATOR);
   position++;
-  Serial.print("HotSpotWifi Password");
-  Serial.print(position);
-  Serial.print("\r\n");
   // now write hotspot wifi password
   if (_bridgeConfig->hotSpotPassword.length() > 0) {
     Configuration::WriteStringToEEPROM(position, bridgeConfig->hotSpotPassword);
@@ -333,21 +329,16 @@ void Configuration::SaveConfig() {
   // Now write all saved wifi ssid and password
   
   int arrayLength = bridgeConfig->wifiList->size();
-  Serial.print(arrayLength);
-  Serial.print(" Wifi to save:\r\n");
   for(int i = 0; i < arrayLength; i ++)
   {
     WifiData* wifiData = bridgeConfig->wifiList->get(i);
     if (wifiData->ssid.length() > 0) {
-      Serial.print(wifiData->ssid);
       WriteStringToEEPROM(position, wifiData->ssid);
       position = position + wifiData->ssid.length();
     }
-    Serial.print("|");
     Configuration::WriteEEPROM(position, CONFIGURATION_SEPARATOR);
     position++;
     if (wifiData->password.length() > 0) {
-      Serial.print(wifiData->password);
       WriteStringToEEPROM(position, wifiData->password);
       position = position + wifiData->password.length();
     }
@@ -358,7 +349,6 @@ void Configuration::SaveConfig() {
   delay(500); // EEPROM Save + Serial.print sometime generate garbage...
   EEPROM.commit();
   delay(500); // EEPROM Save + Serial.print sometime generate garbage...
-  Serial.print("Committed");
   //_loaded = false;
   //free(bridgeConfig->wifiList);
   //free(bridgeConfig);
