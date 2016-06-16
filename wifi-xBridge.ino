@@ -63,6 +63,7 @@ void ProcessWixelMessage(unsigned char* message);
 void SendMessage(unsigned int messageId);
 void SendMessage(unsigned int messageId, uint32_t messageContent);
 void SendMessage(unsigned int messageId, char* messageContent);
+void Sleep(int waitMillis);
 
 /*
  * Wixel Configuration
@@ -186,6 +187,7 @@ void setup() {
  * Todo: This should use a dynamic list of wifi
  */
 void StartWifiConnection(){
+  
   ESP8266WiFiMulti wifiMulti;
   //Serial.write("StartWifiConnection");
   // Open WiFi connection
@@ -212,34 +214,36 @@ void StartWifiConnection(){
     }
     int connectionTry = 0;
     //Serial.print("Trying to connect");
-    const char* WIFI_SSID = "Drake";
-    const char* WIFI_PASSWORD = "G6kpEhWCpB";
-
-    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-    while (WiFi.status() != WL_CONNECTED) {
-      delay(500);
-    }
-   /*
+    
     while (WiFi.status() != WL_CONNECTED && connectionTry < 120) {
-      Serial.print(connectionTry);
-      Serial.print("\r\n");
       connectionTry++;
       if(wifiMulti.run() == WL_CONNECTED) {
-        Serial.print("Connected\r\n");
+        //Serial.print("Connected\r\n");
       }
       else
       {
-        Serial.print("Failed\r\n");
+        //Serial.print("Failed\r\n");
         if (connectionTry % 5 == 0)
         {
-          Serial.print("Not connected :(\r\n");
+          //Serial.print("Not connected :(\r\n");
         }
-        Serial.print("Server Loop\r\n");
+        //Serial.print("Server Loop\r\n");
         _webServer.loop();
-        delay(500);
+        Sleep(500);
       }
-    }*/
+    }
   }
+}
+
+void Sleep(int waitMillis)
+{
+  int startMillis = millis();
+  while (millis() < waitMillis + startMillis)
+  {
+    // Still use webserver loop
+    _webServer.loop();
+  }
+  
 }
 
 /*
@@ -458,9 +462,9 @@ void SendAppEngineData(struct Wixel_RawRecord_Struct dexcomData)
   char appEngineCharArray[appEngineAddress.length() + 1];
   appEngineAddress.toCharArray(appEngineCharArray, appEngineAddress.length() + 1);
   char* appEngineHost = appEngineCharArray;
-  Serial.print("AppEngineHost: ");
+  /*Serial.print("AppEngineHost: ");
   Serial.print(appEngineHost);
-  Serial.print("\r\n");
+  Serial.print("\r\n");*/
 
   WiFiClient client;
   if (!client.connect(appEngineHost, HTTP_PORT)) {

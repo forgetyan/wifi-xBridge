@@ -43,13 +43,7 @@ String WebServer::padding( int number, byte width ) {
  * This method starts the access point and webserver on the default IP (192.168.4.1)
  */
 void WebServer::start(){
-  Serial.print("Configuring access point...\r\n");
   WiFi.softAP(WebServer::ACCESS_POINT_SSID, WebServer::ACCESS_POINT_PWD);
-  Serial.print("SSID: ");
-  Serial.print(WebServer::ACCESS_POINT_SSID);
-  Serial.print("\r\nPWD: ");
-  Serial.print(WebServer::ACCESS_POINT_PWD);
-  Serial.print("\r\n");
   IPAddress myIP = WiFi.softAPIP();
   WebServer::_webServer.on("/", std::bind(&WebServer::handleRoot, this));
   WebServer::_webServer.on("/Test", std::bind(&WebServer::handleTest, this));
@@ -309,7 +303,6 @@ void WebServer::handleRoot() {
   uptime += WebServer::padding(sec % 60, 2);
 
   String configuredWifiText;
-  Serial.print("Get Wifi Count");
   int wifiCount = WebServer::_configuration.getWifiCount();
   if (wifiCount > 0) {
     configuredWifiText = "<table>\n\
@@ -319,13 +312,7 @@ void WebServer::handleRoot() {
         </tr>\n";
     for(int i = 0; i < wifiCount; i++)
     {
-      Serial.print("Get wifi");
-      Serial.print(i);
-      Serial.print("\r\n");
       WifiData* wifiData = WebServer::_configuration.getWifiData(i);
-      Serial.print("Wifi ssid: ");
-      Serial.print(wifiData->ssid);
-      Serial.print("\r\n");
       configuredWifiText = configuredWifiText + "<tr>\n\
           <td>" + wifiData->ssid + "</td>\n\
           <td align=\"right\">\n\
@@ -335,7 +322,6 @@ void WebServer::handleRoot() {
         </tr>\n";
     }
     configuredWifiText = configuredWifiText + "</table>\n";
-    Serial.print("Done listing wifi");
   }
   else {
     configuredWifiText = "No Wifi configured";
