@@ -262,9 +262,12 @@ void StopWifiConnection() {
  * This method will open the connection with a dummy debug server
  */
 void OpenDebugConnection(){
-  // Open DEBUG connection
-  _debugClient.connect(DEBUG_HOST, DEBUG_PORT);
-  SendDebugText("Connected!\r\n");
+  if (_debugClient.status() == CLOSED)
+  {
+    // Open DEBUG connection
+    _debugClient.connect(DEBUG_HOST, DEBUG_PORT);
+    SendDebugText("Connected!\r\n");
+  }
 }
 
 /*
@@ -322,6 +325,7 @@ void loop() {
  */
 void SendDebugText(String debugText){
   #ifdef IS_DEBUG
+  OpenDebugConnection();
   if (WiFi.status() == WL_CONNECTED) {
     _debugClient.print(debugText);
   }
@@ -338,6 +342,7 @@ void SendDebugText(String debugText){
  */
 void SendDebugText(char debugText){
   #ifdef IS_DEBUG
+  OpenDebugConnection();
   if (WiFi.status() == WL_CONNECTED) {
     _debugClient.print(debugText);
   }
@@ -353,6 +358,7 @@ void SendDebugText(char debugText){
  */
 void SendDebugText(char* debugText){
   #ifdef IS_DEBUG
+  OpenDebugConnection();
   if (WiFi.status() == WL_CONNECTED) {
     _debugClient.print(debugText);
   }
@@ -362,6 +368,7 @@ void SendDebugText(char* debugText){
 
 void SendDebugText(uint32_t debugText){
   #ifdef IS_DEBUG
+  OpenDebugConnection();
   if (WiFi.status() == WL_CONNECTED) {
     _debugClient.print(debugText);
   }
@@ -371,6 +378,7 @@ void SendDebugText(uint32_t debugText){
 
 void SendDebugText(int debugText){
   #ifdef IS_DEBUG
+  OpenDebugConnection();
   if (WiFi.status() == WL_CONNECTED) {
     _debugClient.print(debugText);
   }
