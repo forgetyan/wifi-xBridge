@@ -175,8 +175,8 @@ void setup() {
   _webServer.setConfiguration(_configuration);
   _webServer.start();
   StartWifiConnection();
-  OpenDebugConnection();
   #ifdef IS_DEBUG
+  OpenDebugConnection();
   SendDebugText("wifi-xBridge Started!\r\nDebugging mode ON\r\n");
   #endif
 }
@@ -229,7 +229,6 @@ void StartWifiConnection(){
           //Serial.print("Not connected :(\r\n");
         }
         //Serial.print("Server Loop\r\n");
-        _webServer.loop();
         Sleep(500);
       }
     }
@@ -262,11 +261,10 @@ void StopWifiConnection() {
  * This method will open the connection with a dummy debug server
  */
 void OpenDebugConnection(){
-  if (_debugClient.status() == CLOSED)
+  if (WiFi.status() == WL_CONNECTED && _debugClient.status() == CLOSED)
   {
     // Open DEBUG connection
     _debugClient.connect(DEBUG_HOST, DEBUG_PORT);
-    SendDebugText("Connected!\r\n");
   }
 }
 
