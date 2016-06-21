@@ -109,7 +109,6 @@ Beacon Packet - Bridge to App.  Sends the TXID it is filtering on to the app, so
 // All RX Message (From Wixel)
 #define WIXEL_COMM_RX_DATA_PACKET 0x00 // The Wixel send this message when it receive Dexcom packet
 #define WIXEL_COMM_RX_SEND_BEACON 0xF1 // The Wixel send this message when it wants to know if the Transmitter ID is ok
-#define IS_DEBUG
 
 // All TX Message (To Wixel)
 #define WIXEL_COMM_TX_ACKNOWLEDGE_DATA_PACKET 0xF0 // This message send and acknowledge packet to allow Wixel to go in sleep mode
@@ -175,10 +174,11 @@ void setup() {
   _webServer.setConfiguration(_configuration);
   _webServer.start();
   StartWifiConnection();
-  #ifdef IS_DEBUG
-  OpenDebugConnection();
-  SendDebugText("wifi-xBridge Started!\r\nDebugging mode ON\r\n");
-  #endif
+  if (_configuration.getIsDebug())
+  {
+    OpenDebugConnection();
+    SendDebugText("wifi-xBridge Started!\r\nDebugging mode ON\r\n");
+  }
 }
 
 /*
@@ -264,6 +264,7 @@ void OpenDebugConnection(){
   if (WiFi.status() == WL_CONNECTED && _debugClient.status() == CLOSED)
   {
     // Open DEBUG connection
+    
     _debugClient.connect(DEBUG_HOST, DEBUG_PORT);
   }
 }
@@ -274,9 +275,7 @@ void OpenDebugConnection(){
  * This method will close the connection with the debug server
  */
 void CloseDebugConnection() {
-  #ifdef IS_DEBUG
   SendDebugText("Closing connection. Bye!\r\n");
-  #endif
   // Close DEBUG connection
   _debugClient.stop();
 }
@@ -293,16 +292,17 @@ void loop() {
   while (Serial.available() > 0) {
     int receivedValue = Serial.read();
     // Display data for debugging
-    #ifdef IS_DEBUG
-    SendDebugText("Received: ");
-    char parsedText[5];
-    _dexcomHelper.IntToCharArray(receivedValue, parsedText);
-    SendDebugText(parsedText);
-    SendDebugText(" (");
-    SendDebugText(char(receivedValue));
-    SendDebugText(")");
-    SendDebugText("\r\n");
-    #endif
+    if (_configuration.getIsDebug()) {
+      SendDebugText("Received: ");
+    
+      char parsedText[5];
+      _dexcomHelper.IntToCharArray(receivedValue, parsedText);
+      SendDebugText(parsedText);
+      SendDebugText(" (");
+      SendDebugText(char(receivedValue));
+      SendDebugText(")");
+      SendDebugText("\r\n");
+    }
     ManageConnectionStarted(receivedValue);
   }
 
@@ -322,14 +322,14 @@ void loop() {
  * debugText: The text to be sent
  */
 void SendDebugText(String debugText){
-  #ifdef IS_DEBUG
-  OpenDebugConnection();
-  if (WiFi.status() == WL_CONNECTED) {
-    _debugClient.print(debugText);
+  if (_configuration.getIsDebug()) {
+    OpenDebugConnection();
+    if (WiFi.status() == WL_CONNECTED) {
+      _debugClient.print(debugText);
+    }
+    //Serial.print(debugText);
+    CloseDebugConnection();
   }
-  //Serial.print(debugText);
-  CloseDebugConnection();
-  #endif
 }
 
 /*
@@ -339,13 +339,13 @@ void SendDebugText(String debugText){
  * debugText: The text to be sent
  */
 void SendDebugText(char debugText){
-  #ifdef IS_DEBUG
-  OpenDebugConnection();
-  if (WiFi.status() == WL_CONNECTED) {
-    _debugClient.print(debugText);
+  if (_configuration.getIsDebug()) {
+    OpenDebugConnection();
+    if (WiFi.status() == WL_CONNECTED) {
+      _debugClient.print(debugText);
+    }
+    //Serial.write(debugText);
   }
-  //Serial.write(debugText);
-  #endif
 }
 
 /*
@@ -355,33 +355,33 @@ void SendDebugText(char debugText){
  * debugText: The text to be sent
  */
 void SendDebugText(char* debugText){
-  #ifdef IS_DEBUG
-  OpenDebugConnection();
-  if (WiFi.status() == WL_CONNECTED) {
-    _debugClient.print(debugText);
+  if (_configuration.getIsDebug()) {
+    OpenDebugConnection();
+    if (WiFi.status() == WL_CONNECTED) {
+      _debugClient.print(debugText);
+    }
+    //Serial.write(debugText);
   }
-  //Serial.write(debugText);
-  #endif
 }
 
 void SendDebugText(uint32_t debugText){
-  #ifdef IS_DEBUG
-  OpenDebugConnection();
-  if (WiFi.status() == WL_CONNECTED) {
-    _debugClient.print(debugText);
+  if (_configuration.getIsDebug()) {
+    OpenDebugConnection();
+    if (WiFi.status() == WL_CONNECTED) {
+      _debugClient.print(debugText);
+    }
+    //Serial.write(debugText);
   }
-  //Serial.write(debugText);
-  #endif
 }
 
 void SendDebugText(int debugText){
-  #ifdef IS_DEBUG
-  OpenDebugConnection();
-  if (WiFi.status() == WL_CONNECTED) {
-    _debugClient.print(debugText);
+  if (_configuration.getIsDebug()) {
+    OpenDebugConnection();
+    if (WiFi.status() == WL_CONNECTED) {
+      _debugClient.print(debugText);
+    }
+    //Serial.write(debugText);
   }
-  //Serial.write(debugText);
-  #endif
 }
 
 long timeElapsedLastReception;
@@ -417,14 +417,14 @@ void ManageConnectionStarted(int receivedValue) {
   _messagePosition++;
   if (_messagePosition == _messageLength)
   {
-    #ifdef IS_DEBUG
-    // We have a complete messsage to process
-    SendDebugText("Looks like we have a full message to process! (");
-    char textNbChar [5];
-    _dexcomHelper.IntToCharArray((int)_message[0], textNbChar);
-    SendDebugText(textNbChar);
-    SendDebugText(" characters) \r\n");
-    #endif
+    if (_configuration.getIsDebug()) {
+      // We have a complete messsage to process
+      SendDebugText("Looks like we have a full message to process! (");
+      char textNbChar [5];
+      _dexcomHelper.IntToCharArray((int)_message[0], textNbChar);
+      SendDebugText(textNbChar);
+      SendDebugText(" characters) \r\n");
+    }
     // Process message
     ProcessWixelMessage(_message);
     // Reset message vars
@@ -461,9 +461,9 @@ long lastTransmission;
 void SendAppEngineData(struct Wixel_RawRecord_Struct dexcomData)
 {
   uint32_t transmitterId = dexcomData.dex_src_id;
-  #ifdef IS_DEBUG
-  SendDebugText("Preparing to send data to App Engine:\r\n");
-  #endif
+  if (_configuration.getIsDebug()) {
+    SendDebugText("Preparing to send data to App Engine:\r\n");
+  }
 
   String appEngineAddress = _configuration.getAppEngineAddress();
   char appEngineCharArray[appEngineAddress.length() + 1];
@@ -475,19 +475,19 @@ void SendAppEngineData(struct Wixel_RawRecord_Struct dexcomData)
 
   WiFiClient client;
   if (!client.connect(appEngineHost, HTTP_PORT)) {
-    #ifdef IS_DEBUG
-    SendDebugText("Can't connect to App Engine :(\r\n");
-    #endif
+    if (_configuration.getIsDebug()) {
+      SendDebugText("Can't connect to App Engine :(\r\n");
+    }
   }
   else
   {
-    #ifdef IS_DEBUG
-    SendDebugText("Connected to App Engine :)\r\n\r\n");
-    #endif
+    if (_configuration.getIsDebug()) {
+      SendDebugText("Connected to App Engine :)\r\n\r\n");
+    }
   }
-  #ifdef IS_DEBUG
-  SendDebugText("Sending data to App Engine:\r\n");
-  #endif
+  if (_configuration.getIsDebug()) {
+    SendDebugText("Sending data to App Engine:\r\n");
+  }
   String url = "/receiver.cgi?zi=";
   url += transmitterId;
   url += "&pc="; 
@@ -509,11 +509,11 @@ void SendAppEngineData(struct Wixel_RawRecord_Struct dexcomData)
   url += "&gl="; 
   url += 0; // Geolocation ?
 
-  #ifdef IS_DEBUG
-  SendDebugText("Sending data: ");
-  SendDebugText(url);
-  SendDebugText("\r\n");
-  #endif
+  if (_configuration.getIsDebug()) {
+    SendDebugText("Sending data: ");
+    SendDebugText(url);
+    SendDebugText("\r\n");
+  }
   // This will send the request to the server
   client.print(String("GET ") + url + " HTTP/1.1\r\n" +
                "Host: " + appEngineHost + "\r\n" + 
@@ -521,21 +521,21 @@ void SendAppEngineData(struct Wixel_RawRecord_Struct dexcomData)
   unsigned long timeout = millis();
   while (client.available() == 0) {
     if (millis() - timeout > 5000) {
-      #ifdef IS_DEBUG
-      SendDebugText(">>> Client Timeout !\r\n");
-      #endif
+      if (_configuration.getIsDebug()) {
+        SendDebugText(">>> Client Timeout !\r\n");
+      }
       client.stop();
       return;
     }
   }
 
-  #ifdef IS_DEBUG
-  // Read all the lines of the reply from server and print them to Debug if available
-  while(client.available()){
-    String line = client.readStringUntil('\0');
-    SendDebugText(line);
+  if (_configuration.getIsDebug()) {
+    // Read all the lines of the reply from server and print them to Debug if available
+    while(client.available()){
+      String line = client.readStringUntil('\0');
+      SendDebugText(line);
+    }
   }
-  #endif
   SendDebugText("\r\nclosing connection\r\n");
   client.stop();
   lastTransmission = millis();
@@ -550,19 +550,21 @@ void SendAppEngineData(struct Wixel_RawRecord_Struct dexcomData)
  */
 void ProcessWixelMessage(unsigned char* message)
 {
-  #ifdef IS_DEBUG
-  OpenDebugConnection();
-  #else
-  StartWifiConnection();
-  #endif
+  if (_configuration.getIsDebug()) {
+    OpenDebugConnection();
+  }
+  else
+  {
+    StartWifiConnection();
+  }
   unsigned int messageLength = message[0];
   unsigned int messageType = (int)message[1];
-  #ifdef IS_DEBUG
-  SendDebugText("Message type to process:");
-  SendDebugText(message[1]);
-  SendDebugText(":");
-  SendDebugText((unsigned int)message[1]);
-  #endif
+  if (_configuration.getIsDebug()) {
+    SendDebugText("Message type to process:");
+    SendDebugText(message[1]);
+    SendDebugText(":");
+    SendDebugText((unsigned int)message[1]);
+  }
   switch(messageType)
   {
     case WIXEL_COMM_RX_DATA_PACKET:
@@ -611,19 +613,19 @@ void ProcessWixelMessage(unsigned char* message)
         uint32_t transmitterIdSrc;
         memcpy(&transmitterIdSrc, &message[2], 4);
 
-        #ifdef IS_DEBUG
-        SendDebugText("Transmitter ID Src:");
-        SendDebugText(transmitterIdSrc);
-        SendDebugText("\r\n");
-        #endif
+        if (_configuration.getIsDebug()) {
+          SendDebugText("Transmitter ID Src:");
+          SendDebugText(transmitterIdSrc);
+          SendDebugText("\r\n");
+        }
         uint32_t configuredTransmitterId = _configuration.getTransmitterId();
         char* configuredTransmitterIdAscii = _dexcomHelper.DexcomSrcToAscii(configuredTransmitterId);
         char* transmitterIdAscii = _dexcomHelper.DexcomSrcToAscii(transmitterIdSrc);
-        #ifdef IS_DEBUG
-        SendDebugText("Wixel thinks the transmitter ID is: ");
-        SendDebugText(transmitterIdAscii);
-        SendDebugText("\r\n");
-        #endif
+        if (_configuration.getIsDebug()) {
+          SendDebugText("Wixel thinks the transmitter ID is: ");
+          SendDebugText(transmitterIdAscii);
+          SendDebugText("\r\n");
+        }
         // Check if it's the proper transmitter ID
         
         if (strcmp(transmitterIdAscii, configuredTransmitterIdAscii) == 0)
@@ -644,11 +646,14 @@ void ProcessWixelMessage(unsigned char* message)
       SendDebugText(messageType);
       SendDebugText("\r\n");
   }
-  #ifdef IS_DEBUG
-  CloseDebugConnection();
-  #else
-  StopWifiConnection();
-  #endif
+  if (_configuration.getIsDebug())
+  {
+    CloseDebugConnection();
+  }
+  else
+  {
+    StopWifiConnection();
+  }
   
 }
 

@@ -19,6 +19,18 @@ function SaveAppEngineAddress() {
 	document.location.href='/saveappengineaddress?Address=' + document.getElementById("txtAppEngineAddress").value;
 }
 
+function SaveHotSpotConfig() {
+	var hotspotName = document.getElementById("txtHotSpotName").value;
+	var hotspotPassword = document.getElementById("txtHotSpotPassword").value;
+	document.location.href='/savehotspotconfig?name=' + hotspotName + '&pass=' + hotspotPassword;
+}
+
+function SaveDebugConfig() {
+	var debugEnabled = document.getElementById("chkDebug").checked ? "1" : "0";
+	var debugAddress = document.getElementById("txtDebugAddress").value;
+	document.location.href='/savedebugconfig?enabled=' + debugEnabled + '&ip=' + debugAddress;
+}
+
 function SaveSSID() {
 	var ssid_name = document.getElementById("ssid_name");
 	var ssid_password = document.getElementById("ssid_password");
@@ -62,6 +74,6 @@ function ScanWifi() {
 		};
 	};
 	xhttp.send();
-	
+	location.hash = "#scannedWifi";
 	
 }

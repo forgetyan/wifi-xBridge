@@ -53,6 +53,7 @@ void WebServer::start(){
   WebServer::_webServer.on("/Test", std::bind(&WebServer::handleTest, this));
   WebServer::_webServer.on("/savetransmitterid", std::bind(&WebServer::handleSaveTransmitterId, this));
   WebServer::_webServer.on("/saveappengineaddress", std::bind(&WebServer::handleSaveAppEngineAddress, this));
+  WebServer::_webServer.on("/savedebugconfig", std::bind(&WebServer::handleSaveDebugConfig, this));
   WebServer::_webServer.on("/savessid", std::bind(&WebServer::handleSaveSSID, this));
   WebServer::_webServer.on("/remove", std::bind(&WebServer::handleRemoveSSID, this));
   WebServer::_webServer.on("/scanwifi", std::bind(&WebServer::handleScanWifi, this));
@@ -144,6 +145,31 @@ void WebServer::handleRemoveSSID() {
   WebServer::redirect("/?ssidDeleted=1");
 }
 
+
+/*
+ * WebServer::handleSaveDebugConfig
+ * --------------------------------
+ * This page will save the debug configuration
+ */
+void WebServer::handleSaveDebugConfig() {
+  bool needToSave = false;
+  if (WebServer::_webServer.hasArg("enabled")) {
+    bool enabled = WebServer::_webServer.arg("enabled") == "1";
+    
+    WebServer::_configuration.setIsDebug(enabled);
+    needToSave = true;
+  }
+  if (WebServer::_webServer.hasArg("ip")) {
+    String ipAddress = WebServer::_webServer.arg("ip");
+    
+    WebServer::_configuration.setDebugAddress(ipAddress);
+    needToSave = true;
+  }
+  if (needToSave) {
+    WebServer::_configuration.SaveConfig();
+  }
+  WebServer::redirect("/?DebugSaved=1");
+}
 
 /*
  * WebServer::handleSaveAppEngineAddress
@@ -366,6 +392,14 @@ void WebServer::handleRoot() {
     <div class=\"innerPage\">\n\
       <h2 class=\"first\">Uptime</h2>\n\
       " + uptime + "\n\
+      <h2>Hot Spot</h2>\n\
+      <p>\n\
+      <h3>Name</h3><input type=\"text\" id=\"txtHotSpotName\" class=\"textbox\" value=\"wifi-xBridge\"><br>\n\
+      <h3>Password</h3> <input type=\"text\" id=\"txtHotSpotPassword\" class=\"textbox\" value=\"pass\">\n\
+      </p>\n\
+      <p>\n\
+      <a href=\"javascript:SaveHotSpotConfig();\" class=\"button\">Save</a><br/><br/>\n\
+      </p>\n\
       <h2>Dexcom ID</h2>\n\
       <p>\n\
       <input type=\"text\" id=\"txtTransmitterId\" class=\"textbox\" value=\"" + WebServer::getDexcomId() + "\">\n\
@@ -384,7 +418,7 @@ void WebServer::handleRoot() {
       + configuredWifiText + "\
       \n\
       <br/><h2>Configure new Wifi</h2>\n\
-        <a class=\"button\" href=\"javascript:ScanWifi()\">\n\
+        <a name=\"scannedWifi\" class=\"button\" href=\"javascript:ScanWifi()\">\n\
           <div style=\"width:20px; height:20px;display: inline-block; z-index: -1;\">\n\
             <div class=\"wifi-symbol\">\n\
               <div class=\"wifi-circle first\"></div>\n\
@@ -397,40 +431,18 @@ void WebServer::handleRoot() {
         </a><br/><br/>\n\
         <div id=\"scannedWifi\">\n\
         </div>\n\
-      <!--table>\n\
-        <tr>\n\
-          <th align=\"left\">SSID</th>\n\
-          <th></th>\n\
-          <th></th>\n\
-        </tr>\n\
-        <tr>\n\
-          <td>Drake (S)</td>\n\
-          <td>\n\
-            <div class=\"signal-bars mt1 sizing-box good four-bars\">\n\
-              <div class=\"first-bar bar\"></div>\n\
-              <div class=\"second-bar bar\"></div>\n\
-              <div class=\"third-bar bar\"></div>\n\
-              <div class=\"fourth-bar bar\"></div>\n\
-              <div class=\"fifth-bar bar\"></div>\n\
-            </div>\n\
-          </td>\n\
-          <td align=\"right\"><a href=\"javascript:OpenSSIDPopup('Drake');\" class=\"button\">Add</a></td>\n\
-        </tr>\n\
-        <tr>\n\
-          <td>Monique</td>\n\
-          <td>\n\
-            <div class=\"signal-bars mt1 sizing-box bad one-bar\">\n\
-              <div class=\"first-bar bar\"></div>\n\
-              <div class=\"second-bar bar\"></div>\n\
-              <div class=\"third-bar bar\"></div>\n\
-              <div class=\"fourth-bar bar\"></div>\n\
-              <div class=\"fifth-bar bar\"></div>\n\
-            </div>\n\
-          </td>\n\
-          <td align=\"right\"><a href=\"javascript:OpenSSIDPopup('Monique');\" class=\"button\">Add</a></td>\n\
-        </tr>\n\
-      </table-->\n\
-      \n\
+        <h2>Debugging</h2>\n\
+        <h3>Debug Enabled</h3>\n\
+        <p>\n\
+        <input type=\"checkbox\" id=\"chkDebug\">\n\
+        </p>\n\
+        <h3>Debug IP Address</h3>\n\
+        <p>\n\
+        <input type=\"text\" id=\"txtDebugAddress\" class=\"textbox\">\n\
+        </p>\n\
+        <p>\n\
+        <a href=\"javascript:SaveDebugConfig();\" class=\"button\">Save</a><br/><br/>\n\
+        </p>\n\
     </div>\n\
   </body>\n\
 </html>";
@@ -469,11 +481,23 @@ void WebServer::handleJavascript() {
 }\n\
 \n\
 function SaveTransmitterId() {\n\
-  document.location.href='/savetransmitterid?TransmitterId=' + document.getElementById(\"txtTransmitterId\").value;\n\
+  document.location.href='/savetransmitterid?TransmitterId=' + document.getElementById(\"TransmitterId\").value;\n\
 }\n\
 \n\
 function SaveAppEngineAddress() {\n\
   document.location.href='/saveappengineaddress?Address=' + document.getElementById(\"txtAppEngineAddress\").value;\n\
+}\n\
+\n\
+function SaveHotSpotConfig() {\n\
+  var hotspotName = document.getElementById(\"txtHotSpotName\").value;\n\
+  var hotspotPassword = document.getElementById(\"txtHotSpotPassword\").value;\n\
+  document.location.href='/savehotspotconfig?name=' + hotspotName + '&pass=' + hotspotPassword;\n\
+}\n\
+\n\
+function SaveDebugConfig() {\n\
+  var debugEnabled = document.getElementById(\"chkDebug\").checked ? \"1\" : \"0\";\n\
+  var debugAddress = document.getElementById(\"txtDebugAddress\").value;\n\
+  document.location.href='/savedebugconfig?enabled=' + debugEnabled + '&ip=' + debugAddress;\n\
 }\n\
 \n\
 function SaveSSID() {\n\
@@ -511,7 +535,7 @@ function TestSSID(ssid) {\n\
 \n\
 function ScanWifi() {\n\
   var xhttp = new XMLHttpRequest();\n\
-  xhttp.open(\"GET\", \"scanwifi\", true);\n\
+  xhttp.open(\"GET\", \"scannedWifi\", true);\n\
   xhttp.onreadystatechange = function () {\n\
     if(xhttp.readyState === XMLHttpRequest.DONE && xhttp.status === 200){\n\
       var divScannedWifi = document.getElementById(\"scannedWifi\");\n\
@@ -519,9 +543,10 @@ function ScanWifi() {\n\
     };\n\
   };\n\
   xhttp.send();\n\
+  location.hash = \"#scannedWifi\";\n\
   \n\
-  \n\
-}";
+}\n\
+";
   WebServer::_webServer.send(200, "text/javascript", response);
 }
 

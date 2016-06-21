@@ -8,7 +8,8 @@
  * 
  * 1st character is ¶ to ensure that data is valid
  * 4 next chars are for TransmitterId in uint32_t format
- * 
+ * Next characters is Debug enabled flag (1 if enabled)
+ * Next characters until '¬' character is the Debug IP Address
  * Next characters until '¬' character is the App engine address
  * Next characters until next '¬' is the hotspot wifi name (Default is "wifi-xBridge")
  * Next characters until next '¬' is the wifi password (Default none)
@@ -23,6 +24,8 @@
 #include "Configuration.h"
 
 const static char CONFIGURATION_SEPARATOR = '¬';
+const static char DEFAULT_HOTSPOT_NAME = 'wifi-xBridge';
+
 DexcomHelper Configuration::_dexcomHelper;
 
 /*
@@ -50,6 +53,16 @@ void Configuration::setTransmitterId(uint32_t transmitterId) {
 void Configuration::setAppEngineAddress(String address) {
   BridgeConfig* bridgeConfig = getBridgeConfig();
   bridgeConfig->appEngineAddress = address;
+}
+
+/*
+ * Configuration::setDebugAddress
+ * ----------------------------------
+ * This method will save the Debug IP Address
+ */
+void Configuration::setDebugAddress(String address) {
+  BridgeConfig* bridgeConfig = getBridgeConfig();
+  bridgeConfig->debugAddress = address;
 }
 
 /*
@@ -155,6 +168,51 @@ String Configuration::getAppEngineAddress() {
   }
 }
 
+/* 
+ * Configuration::getDebugAddress
+ * ------------------------------
+ * This method will get the debug ip address
+ */
+String Configuration::getDebugAddress() {
+  BridgeConfig* bridgeConfig = getBridgeConfig();
+
+  if(bridgeConfig->debugAddress.length() > 0)
+  {
+    return bridgeConfig->debugAddress;
+  }
+  else
+  {
+    return "";
+  }
+}
+
+/*
+ * Configuration::setIsDebug
+ * -------------------------
+ * This method will set the "Debug" flag true or false
+ */
+void Configuration::setIsDebug(bool isDebug) {
+  BridgeConfig* bridgeConfig = getBridgeConfig();
+  bridgeConfig->isDebug = isDebug;
+}
+
+/*
+ * Configuration::getIsDebug
+ * -------------------------
+ * This method will return the "Debug" flag
+ */
+bool Configuration::getIsDebug(){
+  BridgeConfig* bridgeConfig = getBridgeConfig();
+  if(bridgeConfig->appEngineAddress.length() > 0)
+  {
+    return bridgeConfig->isDebug;
+  }
+  else
+  {
+    return false;
+  }
+}
+
 /*
  * Configuration::getBridgeConfig
  * ------------------------------
@@ -166,6 +224,7 @@ BridgeConfig* Configuration::getBridgeConfig() {
   }
   return _bridgeConfig;
 }
+
 
 /*
  * Configuration::LoadConfig
@@ -186,6 +245,8 @@ BridgeConfig* Configuration::LoadConfig() {
   bool appEngineRead = false;
   bool hotspotNameRead = false;
   bool hotspotPasswordRead = false;
+  bool debugFlagRead = false;
+  bool debugAddressRead = false;
   char firstChar = EEPROM.read(0);
   String nextSSID = "";
   String nextPassword = "";
@@ -206,10 +267,10 @@ BridgeConfig* Configuration::LoadConfig() {
   }*/
   
   
-
-    int i = 5;
+    config->isDebug = EEPROM.read(5) != 0;
+    int i = 6;
     config->appEngineAddress = "";
-    config->hotSpotName = "";
+    config->hotSpotName = DEFAULT_HOTSPOT_NAME;
     config->hotSpotPassword = "";
     while(continueReading) {
       byte newChar = EEPROM.read(i);
@@ -233,6 +294,10 @@ BridgeConfig* Configuration::LoadConfig() {
           {
             hotspotPasswordRead = true;
             config->hotSpotPassword = eepromData;
+          }
+          else if(!debugAddressRead) { 
+            debugAddressRead = true;
+            config->debugAddress = eepromData;
           }
           else // Everything else is saved wifi SSID and Passwords
           {
@@ -268,7 +333,7 @@ BridgeConfig* Configuration::LoadConfig() {
   {
     // Configuration is invalid
     config->appEngineAddress = "";
-    config->hotSpotName = "";
+    config->hotSpotName = DEFAULT_HOTSPOT_NAME;
     config->hotSpotPassword = "";
   }
   _loaded = true;
@@ -300,7 +365,7 @@ void Configuration::SaveConfig() {
   Configuration::WriteEEPROM(3, transmitterIdByteArray[2]);
   Configuration::WriteEEPROM(4, transmitterIdByteArray[3]);*/
   EEPROM_writeAnything(1, transmitterId);
-  position = 5;
+  position = 6;
 
   // Write App engine address
   if (_bridgeConfig->appEngineAddress.length() > 0) {

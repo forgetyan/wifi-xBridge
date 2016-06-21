@@ -24,6 +24,7 @@ class WebServer {
     void handleScanWifi();
     void handleTest();
     void handleSaveTransmitterId();
+    void handleSaveDebugConfig();
     void handleSaveSSID();
     void handleRemoveSSID();
     void handleSaveAppEngineAddress();

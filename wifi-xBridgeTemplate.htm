@@ -33,6 +33,14 @@
 		<div class="innerPage">
 			<h2 class="first">Uptime</h2>
 			03:17:52
+			<h2>Hot Spot</h2>
+			<p>
+			<h3>Name</h3><input type="text" id="txtHotSpotName" class="textbox" value="wifi-xBridge"><br>
+			<h3>Password</h3> <input type="text" id="txtHotSpotPassword" class="textbox" value="pass">
+			</p>
+			<p>
+			<a href="javascript:SaveHotSpotConfig();" class="button">Save</a><br/><br/>
+			</p>
 			<h2>Dexcom ID</h2>
 			<p>
 			<input type="text" id="txtTransmitterId" class="textbox" value="56KWD">
@@ -70,7 +78,7 @@
 			</table>
 			
 			<br/><h2>Configure new Wifi</h2>
-			<a class="button" href="javascript:ScanWifi()">
+			<a name="scannedWifi" class="button" href="javascript:ScanWifi()">
 				<div style="width:20px; height:20px;display: inline-block; z-index: -1;">
 					<div class="wifi-symbol">
 					  <div class="wifi-circle first"></div>
@@ -83,6 +91,18 @@
 			</a><br/><br/>
 			<div id="scannedWifi">
 			</div>
+			<h2>Debugging</h2>
+			<h3>Debug Enabled</h3>
+			<p>
+			<input type="checkbox" id="chkDebug">
+			</p>
+			<h3>Debug IP Address</h3>
+			<p>
+			<input type="text" id="txtDebugAddress" class="textbox">
+			</p>
+			<p>
+			<a href="javascript:SaveDebugConfig();" class="button">Save</a><br/><br/>
+			</p>
 		</div>
 	</body>
 </html>

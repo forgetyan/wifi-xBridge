@@ -13,9 +13,11 @@ struct WifiData {
 };
 
 struct BridgeConfig {
+  bool isDebug = false;
+  String debugAddress = "";
   uint32_t transmitterId = 0;
   String appEngineAddress = "";
-  String hotSpotName = "";
+  String hotSpotName = "wifi-xBridge";
   String hotSpotPassword = "";
   LinkedList<WifiData*> *wifiList = new LinkedList<WifiData*>();
 };
@@ -26,10 +28,14 @@ class Configuration {
     void Testing();
     void setTransmitterId(uint32_t transmitterId);
     void setAppEngineAddress(String address);
+    void setDebugAddress(String address);
+    void setIsDebug(bool isDebug);
+    bool getIsDebug();
     void saveSSID(String ssidName, String ssidPassword);
     void deleteSSID(String ssidName);
     uint32_t getTransmitterId();
     String getAppEngineAddress();
+    String getDebugAddress();
     void SaveConfig();
     int getWifiCount();
     WifiData* getWifiData(int position);
