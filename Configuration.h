@@ -30,12 +30,16 @@ class Configuration {
     void setAppEngineAddress(String address);
     void setDebugAddress(String address);
     void setIsDebug(bool isDebug);
+    void setHotSpotName(String name);
+    void setHotSpotPass(String pass);
     bool getIsDebug();
     void saveSSID(String ssidName, String ssidPassword);
     void deleteSSID(String ssidName);
     uint32_t getTransmitterId();
     String getAppEngineAddress();
     String getDebugAddress();
+    String getHotSpotName();
+    String getHotSpotPass();
     void SaveConfig();
     int getWifiCount();
     WifiData* getWifiData(int position);

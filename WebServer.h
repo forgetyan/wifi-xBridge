@@ -25,18 +25,16 @@ class WebServer {
     void handleTest();
     void handleSaveTransmitterId();
     void handleSaveDebugConfig();
+    void handleSaveHotSpotConfig();
     void handleSaveSSID();
     void handleRemoveSSID();
     void handleSaveAppEngineAddress();
     void redirect(String url);
-    // const char* ACCESS_POINT_SSID;
-    // const char* ACCESS_POINT_PWD;
-    char* ACCESS_POINT_SSID;
-    char* ACCESS_POINT_PWD;
     String padding(int number, byte width);
     static ESP8266WebServer _webServer;
     static Configuration _configuration;
     static DexcomHelper _dexcomHelper;
+    void StartAccessPoint();
     
 };
 

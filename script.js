@@ -66,7 +66,7 @@ function TestSSID(ssid) {
 
 function ScanWifi() {
 	var xhttp = new XMLHttpRequest();
-	xhttp.open("GET", "scannedWifi", true);
+	xhttp.open("GET", "scanwifi", true);
 	xhttp.onreadystatechange = function () {
 		if(xhttp.readyState === XMLHttpRequest.DONE && xhttp.status === 200){
 			var divScannedWifi = document.getElementById("scannedWifi");

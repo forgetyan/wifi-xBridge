@@ -24,7 +24,7 @@
 #include "Configuration.h"
 
 const static char CONFIGURATION_SEPARATOR = '¬';
-const static char DEFAULT_HOTSPOT_NAME = 'wifi-xBridge';
+const static String DEFAULT_HOTSPOT_NAME = "wifi-xBridge";
 
 DexcomHelper Configuration::_dexcomHelper;
 
@@ -53,6 +53,26 @@ void Configuration::setTransmitterId(uint32_t transmitterId) {
 void Configuration::setAppEngineAddress(String address) {
   BridgeConfig* bridgeConfig = getBridgeConfig();
   bridgeConfig->appEngineAddress = address;
+}
+
+/*
+ * Configuration::setHotSpotName
+ * -----------------------------
+ * This method will save the hotspot name
+ */
+void Configuration::setHotSpotName(String name) {
+  BridgeConfig* bridgeConfig = getBridgeConfig();
+  bridgeConfig->hotSpotName = name;
+}
+
+/*
+ * Configuration::setHotSpotPass
+ * -----------------------------
+ * This method will save the hotspot password
+ */
+void Configuration::setHotSpotPass(String pass) {
+  BridgeConfig* bridgeConfig = getBridgeConfig();
+  bridgeConfig->hotSpotPassword = pass;
 }
 
 /*
@@ -161,6 +181,43 @@ String Configuration::getAppEngineAddress() {
   if(bridgeConfig->appEngineAddress.length() > 0)
   {
     return bridgeConfig->appEngineAddress;
+  }
+  else
+  {
+    return "";
+  }
+}
+
+/*
+ * Configuration::getHotSpotName
+ * -----------------------------
+ * This method will return the hotspot name
+ */
+String Configuration::getHotSpotName() {
+  BridgeConfig* bridgeConfig = getBridgeConfig();
+
+  if(bridgeConfig->hotSpotName.length() > 0)
+  {
+    return bridgeConfig->hotSpotName;
+  }
+  else
+  {
+    return DEFAULT_HOTSPOT_NAME;
+  }
+}
+
+
+/*
+ * Configuration::getHotSpotName
+ * -----------------------------
+ * This method will return the hotspot name
+ */
+String Configuration::getHotSpotPass() {
+  BridgeConfig* bridgeConfig = getBridgeConfig();
+
+  if(bridgeConfig->hotSpotPassword.length() > 0)
+  {
+    return bridgeConfig->hotSpotPassword;
   }
   else
   {
@@ -365,6 +422,7 @@ void Configuration::SaveConfig() {
   Configuration::WriteEEPROM(3, transmitterIdByteArray[2]);
   Configuration::WriteEEPROM(4, transmitterIdByteArray[3]);*/
   EEPROM_writeAnything(1, transmitterId);
+  Configuration::WriteEEPROM(5, bridgeConfig->isDebug ? 1 : 0);
   position = 6;
 
   // Write App engine address
@@ -390,7 +448,13 @@ void Configuration::SaveConfig() {
   }
   Configuration::WriteEEPROM(position , CONFIGURATION_SEPARATOR);
   position++;
-  
+  // now write debug address
+  if (_bridgeConfig->debugAddress.length() > 0) {
+    Configuration::WriteStringToEEPROM(position, bridgeConfig->debugAddress);
+    position = position + bridgeConfig->debugAddress.length();
+  }
+  Configuration::WriteEEPROM(position , CONFIGURATION_SEPARATOR);
+  position++;
   // Now write all saved wifi ssid and password
   
   int arrayLength = bridgeConfig->wifiList->size();

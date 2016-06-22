@@ -11,8 +11,8 @@ DexcomHelper WebServer::_dexcomHelper;
  * Constructor
  */
 WebServer::WebServer(){
-  WebServer::ACCESS_POINT_SSID = "wifi-xBridge";
-  WebServer::ACCESS_POINT_PWD = "";
+  //WebServer::ACCESS_POINT_SSID = "wifi-xBridge";
+  //WebServer::ACCESS_POINT_PWD = "";
 }
 
 void WebServer::setConfiguration(Configuration configuration) {
@@ -47,12 +47,13 @@ String WebServer::padding( int number, byte width ) {
  * This method starts the access point and webserver on the default IP (192.168.4.1)
  */
 void WebServer::start(){
-  WiFi.softAP(WebServer::ACCESS_POINT_SSID, WebServer::ACCESS_POINT_PWD);
+  WebServer::StartAccessPoint();
   IPAddress myIP = WiFi.softAPIP();
   WebServer::_webServer.on("/", std::bind(&WebServer::handleRoot, this));
   WebServer::_webServer.on("/Test", std::bind(&WebServer::handleTest, this));
   WebServer::_webServer.on("/savetransmitterid", std::bind(&WebServer::handleSaveTransmitterId, this));
   WebServer::_webServer.on("/saveappengineaddress", std::bind(&WebServer::handleSaveAppEngineAddress, this));
+  WebServer::_webServer.on("/savehotspotconfig", std::bind(&WebServer::handleSaveHotSpotConfig, this));
   WebServer::_webServer.on("/savedebugconfig", std::bind(&WebServer::handleSaveDebugConfig, this));
   WebServer::_webServer.on("/savessid", std::bind(&WebServer::handleSaveSSID, this));
   WebServer::_webServer.on("/remove", std::bind(&WebServer::handleRemoveSSID, this));
@@ -61,6 +62,19 @@ void WebServer::start(){
   WebServer::_webServer.on("/script.js", std::bind(&WebServer::handleJavascript, this));
   //WebServer::_webServer.onNotFound(std::bind(&WebServer::handleNotFound, this));
   WebServer::_webServer.begin();
+}
+
+/*
+ * This method will use the saved configuration to start an AccessPoint
+ */
+void WebServer::StartAccessPoint() {
+  String hotspotName = WebServer::_configuration.getHotSpotName();
+  String hotspotPass = WebServer::_configuration.getHotSpotPass();
+  char* hotspotNameArray;
+  char* hotspotPassArray;
+  hotspotName.toCharArray(hotspotNameArray, hotspotName.length() + 1);
+  hotspotPass.toCharArray(hotspotPassArray, hotspotPass.length() + 1);
+  WiFi.softAP(hotspotNameArray, hotspotPassArray);
 }
 
 /*
@@ -145,6 +159,25 @@ void WebServer::handleRemoveSSID() {
   WebServer::redirect("/?ssidDeleted=1");
 }
 
+/*
+ * WebServer::handleSaveHotSpotConfig
+ * ----------------------------------
+ * This method will save the hotspot configuration
+ */
+void WebServer::handleSaveHotSpotConfig() {
+  bool needToSave = false;
+  if (WebServer::_webServer.hasArg("name") && WebServer::_webServer.hasArg("pass")) {
+    String name = WebServer::_webServer.arg("name");
+    String pass = WebServer::_webServer.arg("pass");
+    
+    WebServer::_configuration.setHotSpotName(name);
+    WebServer::_configuration.setHotSpotPass(pass);
+    WebServer::_configuration.SaveConfig();
+    // Restart hotspot with new configurations
+    WebServer::StartAccessPoint();
+  }
+  WebServer::redirect("/?HotSpotSaved=1");
+}
 
 /*
  * WebServer::handleSaveDebugConfig
@@ -356,6 +389,11 @@ void WebServer::handleRoot() {
   else {
     configuredWifiText = "No Wifi configured";
   }
+
+  String chkDebugCheckedText = "";
+  if (WebServer::_configuration.getIsDebug()) {
+    chkDebugCheckedText = " checked";
+  }
   
   String response = "<html>\n\
  <head>\n\
@@ -394,8 +432,8 @@ void WebServer::handleRoot() {
       " + uptime + "\n\
       <h2>Hot Spot</h2>\n\
       <p>\n\
-      <h3>Name</h3><input type=\"text\" id=\"txtHotSpotName\" class=\"textbox\" value=\"wifi-xBridge\"><br>\n\
-      <h3>Password</h3> <input type=\"text\" id=\"txtHotSpotPassword\" class=\"textbox\" value=\"pass\">\n\
+      <h3>Name</h3><input type=\"text\" id=\"txtHotSpotName\" class=\"textbox\" value=\"" + WebServer::_configuration.getHotSpotName() + "\"><br>\n\
+      <h3>Password</h3> <input type=\"text\" id=\"txtHotSpotPassword\" class=\"textbox\" value=\"" + WebServer::_configuration.getHotSpotPass() + "\">\n\
       </p>\n\
       <p>\n\
       <a href=\"javascript:SaveHotSpotConfig();\" class=\"button\">Save</a><br/><br/>\n\
@@ -434,11 +472,11 @@ void WebServer::handleRoot() {
         <h2>Debugging</h2>\n\
         <h3>Debug Enabled</h3>\n\
         <p>\n\
-        <input type=\"checkbox\" id=\"chkDebug\">\n\
+        <input type=\"checkbox\" id=\"chkDebug\"" + chkDebugCheckedText + ">\n\
         </p>\n\
         <h3>Debug IP Address</h3>\n\
         <p>\n\
-        <input type=\"text\" id=\"txtDebugAddress\" class=\"textbox\">\n\
+        <input type=\"text\" id=\"txtDebugAddress\" class=\"textbox\" value=\"" + WebServer::_configuration.getDebugAddress() +  "\">\n\
         </p>\n\
         <p>\n\
         <a href=\"javascript:SaveDebugConfig();\" class=\"button\">Save</a><br/><br/>\n\
@@ -535,7 +573,7 @@ function TestSSID(ssid) {\n\
 \n\
 function ScanWifi() {\n\
   var xhttp = new XMLHttpRequest();\n\
-  xhttp.open(\"GET\", \"scannedWifi\", true);\n\
+  xhttp.open(\"GET\", \"scanwifi\", true);\n\
   xhttp.onreadystatechange = function () {\n\
     if(xhttp.readyState === XMLHttpRequest.DONE && xhttp.status === 200){\n\
       var divScannedWifi = document.getElementById(\"scannedWifi\");\n\
